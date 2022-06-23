@@ -43,13 +43,16 @@ public class MainView extends AppLayout {
         header.expand(logo);
         header.setWidth("100%");
         header.addClassNames("py-0", "px-m");
-        addToNavbar(header);
+        this.addToNavbar(header);
     }
 
     private void createMenu() {
         RouterLink assetsLink = new RouterLink("Assets", AssetsView.class);
         assetsLink.setHighlightCondition(HighlightConditions.sameLocation());
 
-        addToDrawer(new VerticalLayout(assetsLink));
+        RouterLink repositoriesLink = new RouterLink("Repositories", S3ServersView.class);
+        repositoriesLink.setHighlightCondition(HighlightConditions.sameLocation());
+
+        this.addToDrawer(new VerticalLayout(assetsLink, repositoriesLink));
     }
 }

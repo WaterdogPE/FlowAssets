@@ -25,6 +25,7 @@ import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import dev.waterdog.flowassets.repositories.AssetsRepository;
+import dev.waterdog.flowassets.repositories.S3ServersRepository;
 import dev.waterdog.flowassets.structure.FlowAsset;
 import dev.waterdog.flowassets.views.forms.AssetsForm;
 
@@ -40,13 +41,13 @@ public class AssetsView extends VerticalLayout {
     AssetsForm form;
 
     @Inject
-    public AssetsView(AssetsRepository assetsRepository) {
+    public AssetsView(AssetsRepository assetsRepository, S3ServersRepository serversRepository) {
         this.assetsRepository = assetsRepository;
         this.addClassName("list-view");
         this.setSizeFull();
         this.configureGrid();
 
-        this.form = new AssetsForm(this, assetsRepository);
+        this.form = new AssetsForm(this, assetsRepository, serversRepository);
         this.form.setWidth("25em");
         this.form.setVisible(false);
 
@@ -102,6 +103,11 @@ public class AssetsView extends VerticalLayout {
             this.form.setVisible(true);
             this.addClassName("editing");
         }
+    }
+
+    public void updateList() {
+        String filter = this.nameFilter.getValue();
+        this.grid.setItems(this.assetsRepository.findByName(filter));
     }
 
     public void updateList(String filter) {
