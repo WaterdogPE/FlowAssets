@@ -1,0 +1,6 @@
+@import url('./views/list-view.css');
+
+a[highlight] {
+    font-weight: bold;
+    text-decoration: underline;
+}
