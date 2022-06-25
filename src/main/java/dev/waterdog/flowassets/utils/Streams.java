@@ -13,17 +13,25 @@
  * limitations under the License.
  */
 
-package dev.waterdog.flowassets;
+package dev.waterdog.flowassets.utils;
 
-import com.vaadin.flow.component.dependency.CssImport;
-import com.vaadin.flow.component.dependency.NpmPackage;
-import com.vaadin.flow.component.page.AppShellConfigurator;
-import com.vaadin.flow.component.page.Push;
-import com.vaadin.flow.theme.Theme;
+import io.vertx.core.buffer.Buffer;
 
-@Push
-@Theme(value = "breeze", variant = "dark")
-@CssImport("./themes/default/styles.css")
-@NpmPackage(value = "lumo-css-framework", version = "^4.0.10") // load required packages for theme
-public class Application implements AppShellConfigurator {
+import java.io.IOException;
+import java.io.InputStream;
+
+public class Streams {
+
+    public static Buffer readToBuffer(InputStream stream) throws IOException {
+        Buffer buffer = Buffer.buffer();
+        byte[] buf = new byte[1024 * 8];
+        while (stream.available() > 0) {
+            int read = stream.read(buf);
+            if (read < 1) {
+                break;
+            }
+            buffer.appendBytes(buf, 0, read);
+        }
+        return buffer;
+    }
 }

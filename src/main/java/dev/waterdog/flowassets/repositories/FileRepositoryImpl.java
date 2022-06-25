@@ -13,17 +13,15 @@
  * limitations under the License.
  */
 
-package dev.waterdog.flowassets;
+package dev.waterdog.flowassets.repositories;
 
-import com.vaadin.flow.component.dependency.CssImport;
-import com.vaadin.flow.component.dependency.NpmPackage;
-import com.vaadin.flow.component.page.AppShellConfigurator;
-import com.vaadin.flow.component.page.Push;
-import com.vaadin.flow.theme.Theme;
+import dev.waterdog.flowassets.structure.FileSnapshot;
 
-@Push
-@Theme(value = "breeze", variant = "dark")
-@CssImport("./themes/default/styles.css")
-@NpmPackage(value = "lumo-css-framework", version = "^4.0.10") // load required packages for theme
-public class Application implements AppShellConfigurator {
+import java.util.concurrent.CompletableFuture;
+
+public interface FileRepositoryImpl {
+
+    CompletableFuture<Void> saveFileSnapshot(FileSnapshot snapshot);
+    CompletableFuture<FileSnapshot> loadSnapshot(String uuid, String fileName);
+    CompletableFuture<Void> deleteSnapshots(String uuid);
 }

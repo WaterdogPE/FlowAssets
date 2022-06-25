@@ -16,10 +16,9 @@
 package dev.waterdog.flowassets.views.forms;
 
 import com.vaadin.flow.component.ClickEvent;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
-import com.vaadin.flow.component.notification.Notification;
-import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.upload.*;
 import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
@@ -27,15 +26,17 @@ import com.vaadin.flow.data.binder.BeanValidationBinder;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.binder.ValidationException;
 import dev.waterdog.flowassets.repositories.AssetsRepository;
+import dev.waterdog.flowassets.repositories.LocalFileRepository;
 import dev.waterdog.flowassets.repositories.S3ServersRepository;
-import dev.waterdog.flowassets.structure.FlowAsset;
-import dev.waterdog.flowassets.structure.RepositoryData;
-import dev.waterdog.flowassets.structure.RepositoryType;
-import dev.waterdog.flowassets.structure.S3ServerData;
-import dev.waterdog.flowassets.utils.Notifications;
+import dev.waterdog.flowassets.structure.*;
+import dev.waterdog.flowassets.utils.Helper;
+import dev.waterdog.flowassets.utils.Streams;
 import dev.waterdog.flowassets.views.AssetsView;
+import io.vertx.core.buffer.Buffer;
 import lombok.extern.jbosslog.JBossLog;
 
+import javax.enterprise.inject.spi.CDI;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -47,10 +48,11 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
     private final S3ServersRepository serversRepository;
     private final AssetsView parent;
 
-    private volatile boolean uploaded;
-    private String uploadName;
-
     private FlowAsset asset = new FlowAsset();
+    private boolean editMode = false;
+
+    private boolean uploaded;
+    private String uploadName;
 
     TextField assetName = new TextField("Name");
     TextField assetLocation = new TextField("Asset Location");
@@ -76,14 +78,12 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
         this.assetRepository.setItemLabelGenerator(RepositoryData::getRepositoryName);
 
         this.assetLocation.setReadOnly(true);
+        this.singleFileUpload.addSucceededListener(this::onUpload);
 
         this.binder.forField(this.assetRepository).bind(asset -> this.createRepositoryFromName(asset.getAssetRepository(), serversRepository),
                 (asset, repository) -> asset.setAssetRepository(repository.getRepositoryName()));
-
-        this.singleFileUpload.addSucceededListener(this::onUpload);
-
         this.binder.bindInstanceFields(this);
-        this.binder.addStatusChangeListener(e -> this.save.setEnabled(this.binder.isValid() && this.uploaded));
+        this.binder.addStatusChangeListener(e -> this.save.setEnabled(this.binder.isValid() && (this.editMode || this.uploaded)));
         this.add(this.assetName, this.assetLocation, this.singleFileUpload, this.assetRepository);
         this.addParentComponents();
     }
@@ -96,41 +96,79 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
 
     @Override
     protected void onSaveButton(ClickEvent<Button> event, FlowAsset value) {
-        if (!this.uploaded) {
-            Notifications.error("Upload has not finished yet! Please wait");
+        if (!this.editMode && !this.uploaded) {
+            Helper.errorNotif("Upload has not finished yet! Please wait");
             return;
         }
 
         try {
             this.binder.writeBean(value);
         } catch (ValidationException e) {
-            Notifications.error("Error: " + e.getLocalizedMessage());
+            Helper.errorNotif("Error: " + e.getLocalizedMessage());
             log.error("Failed validating AssetsForm", e);
             return;
         }
 
-        RepositoryData repositoryData = this.assetRepository.getValue();
-        String baseUrl = "/";
-        if (repositoryData.getType() == RepositoryType.REMOTE_S3) {
-            // TODO: base url
+        if (!this.assetsRepository.findByName(value.getAssetName()).isEmpty()) {
+            Helper.errorNotif("Asset with name '"+ value.getAssetName() + "' already exists!");
+            return;
         }
 
-        // TODO: more randomize
-        baseUrl += UUID.nameUUIDFromBytes(value.getAssetName().getBytes()) + "/";
-        String[] namespaces = this.uploadName.split("\\.");
-        baseUrl += value.getAssetName().toLowerCase() + "." + namespaces[namespaces.length - 1];
+        FlowAsset asset = this.assetsRepository.save(value);
+        if (this.editMode) {
+            this.finishSave(asset);
+            return;
+        }
 
-        // Manually sync url
-        value.setAssetLocation(baseUrl);
-        this.assetLocation.setValue(baseUrl);
+        // TODO: get correct repository
+        LocalFileRepository repository = CDI.current().select(LocalFileRepository.class).get();
+        FileSnapshot snapshot = this.createFileSnapshot(asset.getUuid());
+        if (snapshot == null) {
+            Helper.errorNotif("Unable to create asset");
+            return;
+        }
 
-        this.assetsRepository.save(value);
-        this.parent.updateList();
-        this.closeForm();
+        UI ui = UI.getCurrent();
+        repository.saveFileSnapshot(snapshot).whenComplete((i, error) -> {
+            if (error != null) {
+                Helper.push(ui, () -> Helper.errorNotif("Can not save asset"));
+                log.error("Can not save asset", error);
+                return;
+            }
+            String[] namespaces = this.uploadName.split("\\.");
+            String baseUrl = asset.getUuid() + "/" + this.uploadName +
+                    "." + namespaces[namespaces.length - 1];
+
+            asset.setAssetLocation(baseUrl);
+            this.assetsRepository.save(asset);
+            Helper.push(ui, () -> this.finishSave(asset));
+        });
+    }
+
+    private void finishSave(FlowAsset asset) {
+        try {
+            this.parent.updateList();
+            this.closeForm();
+            Helper.successNotif("Saved " + asset.getAssetName());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     protected void onDeleteButton(ClickEvent<Button> event, FlowAsset value) {
+        UI ui = UI.getCurrent();
+        // TODO: get correct repository
+        LocalFileRepository repository = CDI.current().select(LocalFileRepository.class).get();
+        repository.deleteSnapshots(value.getUuid().toString()).whenComplete((v, error) -> {
+           if (error == null) {
+               Helper.push(ui, () -> Helper.successNotif("Deleted asset files: " + value.getAssetName()));
+           } else {
+               Helper.push(ui, () -> Helper.errorNotif("Can not delete asset files: " + error.getLocalizedMessage()));
+               log.error("Can not delete asset", error);
+           }
+        });
+
         this.assetsRepository.remove(value);
         this.parent.updateList();
         this.closeForm();
@@ -145,7 +183,7 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
         this.setValue(null);
         this.setVisible(false);
         this.parent.removeClassName("editing");
-        this.singleFileUpload.clearFileList(); // TODO: verify if it clears buff too
+        this.singleFileUpload.clearFileList();
     }
 
     @Override
@@ -155,7 +193,8 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
 
     public void setValue(FlowAsset value, boolean create) {
         this.setValue(value);
-        this.assetRepository.setReadOnly(!create);
+        this.editMode = !create;
+        this.assetRepository.setReadOnly(this.editMode);
     }
 
     @Override
@@ -174,5 +213,16 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
             return null;
         }
         return new RepositoryData(RepositoryType.REMOTE_S3, serverData.getServerName());
+    }
+
+    private FileSnapshot createFileSnapshot(UUID uuid) {
+        Buffer buffer;
+        try {
+            buffer = Streams.readToBuffer(this.memoryBuffer.getInputStream());
+        } catch (IOException e) {
+            log.error("Can not create buffer", e);
+            return null;
+        }
+        return new FileSnapshot(uuid.toString(), this.uploadName, buffer);
     }
 }

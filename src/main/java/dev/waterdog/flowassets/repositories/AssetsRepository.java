@@ -31,12 +31,13 @@ public class AssetsRepository implements PanacheRepository<FlowAsset> {
     }
 
     @Transactional
-    public void save(FlowAsset asset) {
-        if (this.isPersistent(asset)) {
-            this.persist(asset);
-        } else {
-            this.persist(this.getEntityManager().merge(asset));
+    public FlowAsset save(FlowAsset asset) {
+        if (!this.isPersistent(asset)) {
+            asset = this.getEntityManager().merge(asset);;
         }
+
+        this.persist(asset);
+        return asset;
     }
 
     @Transactional

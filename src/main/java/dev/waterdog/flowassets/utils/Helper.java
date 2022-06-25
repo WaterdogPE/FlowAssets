@@ -15,14 +15,28 @@
 
 package dev.waterdog.flowassets.utils;
 
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 
-public class Notifications {
+public class Helper {
 
-    public static void error(String message) {
+    public static void push(UI ui, Runnable runnable) {
+        ui.access(() -> {
+            runnable.run();
+            ui.push();
+        });
+    }
+
+    public static void errorNotif(String message) {
         Notification notification = new Notification(message, 3000);
         notification.addThemeVariants(NotificationVariant.LUMO_ERROR);
+        notification.open();
+    }
+
+    public static void successNotif(String message) {
+        Notification notification = new Notification(message, 3000);
+        notification.addThemeVariants(NotificationVariant.LUMO_SUCCESS);
         notification.open();
     }
 }

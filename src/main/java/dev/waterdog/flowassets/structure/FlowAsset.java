@@ -15,18 +15,28 @@
 
 package dev.waterdog.flowassets.structure;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Type;
 
 import javax.persistence.*;
+import java.util.UUID;
 
 @Entity
 @ToString(callSuper = true)
 @Getter @Setter
 @Table(name = "assets")
-public class FlowAsset extends PanacheEntity {
+public class FlowAsset extends PanacheEntityBase {
+
+    @Id
+    @Type(type = "uuid-char")
+    @GeneratedValue(generator = "uuid2")
+    @GenericGenerator(name = "uuid2", strategy = "uuid2")
+    @Column(name = "uuid", unique = true, columnDefinition = "varchar(36)")
+    private UUID uuid;
 
     @Column(name = "asset_name")
     private String assetName;

@@ -13,17 +13,14 @@
  * limitations under the License.
  */
 
-package dev.waterdog.flowassets;
+package dev.waterdog.flowassets.structure;
 
-import com.vaadin.flow.component.dependency.CssImport;
-import com.vaadin.flow.component.dependency.NpmPackage;
-import com.vaadin.flow.component.page.AppShellConfigurator;
-import com.vaadin.flow.component.page.Push;
-import com.vaadin.flow.theme.Theme;
+import io.vertx.core.buffer.Buffer;
+import lombok.Data;
 
-@Push
-@Theme(value = "breeze", variant = "dark")
-@CssImport("./themes/default/styles.css")
-@NpmPackage(value = "lumo-css-framework", version = "^4.0.10") // load required packages for theme
-public class Application implements AppShellConfigurator {
+@Data
+public class FileSnapshot {
+    private final String uuid;
+    private final String fileName;
+    private final Buffer content;
 }

@@ -17,8 +17,6 @@ package dev.waterdog.flowassets.views.forms;
 
 import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.notification.Notification;
-import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.textfield.GeneratedVaadinTextField;
 import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.component.textfield.TextField;
@@ -29,7 +27,7 @@ import com.vaadin.flow.data.binder.ValidationException;
 import com.vaadin.flow.function.ValueProvider;
 import dev.waterdog.flowassets.repositories.S3ServersRepository;
 import dev.waterdog.flowassets.structure.S3ServerData;
-import dev.waterdog.flowassets.utils.Notifications;
+import dev.waterdog.flowassets.utils.Helper;
 import dev.waterdog.flowassets.views.S3ServersView;
 import lombok.extern.jbosslog.JBossLog;
 
@@ -76,7 +74,7 @@ public class S3ServersForm extends AbstractEditForm<S3ServerData> {
             this.parent.updateList();
             this.closeForm();
         } catch (ValidationException e) {
-            Notifications.error("Error: " + e.getLocalizedMessage());
+            Helper.errorNotif("Error: " + e.getLocalizedMessage());
             log.error("Failed validating RepositoriesForm", e);
         }
     }
