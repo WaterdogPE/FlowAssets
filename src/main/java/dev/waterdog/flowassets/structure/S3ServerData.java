@@ -20,6 +20,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
+import javax.persistence.Cacheable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Table;
@@ -28,6 +29,7 @@ import javax.persistence.Table;
 @ToString(callSuper = true)
 @Getter
 @Setter
+@Cacheable
 @Table(name = "s3_servers")
 public class S3ServerData extends PanacheEntity {
 
@@ -45,4 +47,7 @@ public class S3ServerData extends PanacheEntity {
 
     @Column(name = "secret_key")
     private String secretkey;
+
+    @Column(name = "region_name")
+    private String regionName;
 }

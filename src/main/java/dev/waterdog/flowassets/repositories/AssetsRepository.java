@@ -21,13 +21,19 @@ import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import javax.enterprise.context.ApplicationScoped;
 import javax.transaction.Transactional;
 import java.util.List;
+import java.util.UUID;
 
 @ApplicationScoped
 public class AssetsRepository implements PanacheRepository<FlowAsset> {
 
     @Transactional
     public List<FlowAsset> findByName(String name) {
-        return find("asset_name like ?1", "%" + name.trim() + "%").list();
+        return this.find("asset_name like ?1", "%" + name.trim() + "%").list();
+    }
+
+    @Transactional
+    public FlowAsset findByUuid(String uuid) {
+        return this.find("uuid", UUID.fromString(uuid)).firstResult();
     }
 
     @Transactional

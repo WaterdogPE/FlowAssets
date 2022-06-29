@@ -13,15 +13,17 @@
  * limitations under the License.
  */
 
-package dev.waterdog.flowassets.repositories;
+package dev.waterdog.flowassets.repositories.storage;
 
 import dev.waterdog.flowassets.structure.FileSnapshot;
+import dev.waterdog.flowassets.structure.RepositoryType;
 
 import java.util.concurrent.CompletableFuture;
 
-public interface FileRepositoryImpl {
+public interface StorageRepositoryImpl {
 
     CompletableFuture<Void> saveFileSnapshot(FileSnapshot snapshot);
     CompletableFuture<FileSnapshot> loadSnapshot(String uuid, String fileName);
     CompletableFuture<Void> deleteSnapshots(String uuid);
+    RepositoryType getType();
 }

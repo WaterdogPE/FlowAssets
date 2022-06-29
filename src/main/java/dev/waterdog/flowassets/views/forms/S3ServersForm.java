@@ -15,9 +15,10 @@
 
 package dev.waterdog.flowassets.views.forms;
 
+import com.vaadin.flow.component.AbstractSinglePropertyField;
 import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.textfield.GeneratedVaadinTextField;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.BeanValidationBinder;
@@ -30,6 +31,7 @@ import dev.waterdog.flowassets.structure.S3ServerData;
 import dev.waterdog.flowassets.utils.Helper;
 import dev.waterdog.flowassets.views.S3ServersView;
 import lombok.extern.jbosslog.JBossLog;
+import software.amazon.awssdk.regions.Region;
 
 import java.net.URL;
 
@@ -43,6 +45,7 @@ public class S3ServersForm extends AbstractEditForm<S3ServerData> {
     TextField serverName = new TextField("Name");
     TextField bucketName = new TextField("Bucket Name");
     TextField bucketUrl = new TextField("Bucket URL");
+    ComboBox<String> serverRegion = new ComboBox<>("Region");
     PasswordField accessKey = new PasswordField("Access Key");
     PasswordField secretkey = new PasswordField("Secret Key");
     Binder<S3ServerData> binder = new BeanValidationBinder<>(S3ServerData.class);
@@ -51,8 +54,13 @@ public class S3ServersForm extends AbstractEditForm<S3ServerData> {
         super();
         this.parent = parent;
         this.repository = assetsRepository;
-        this.binder.bindInstanceFields(this);
 
+        this.serverRegion.setItems(Region.regions()
+                .stream()
+                .map(Region::id)
+                .toList());
+
+        this.binder.bindInstanceFields(this);
         this.binder.forField(this.bucketUrl)
                 .withValidator(this::testUrl, "Invalid URL")
                 .bind(S3ServerData::getBucketUrl, S3ServerData::setBucketUrl);
@@ -60,6 +68,7 @@ public class S3ServersForm extends AbstractEditForm<S3ServerData> {
         this.validateNotEmpty(this.bucketName, S3ServerData::getBucketName, S3ServerData::setBucketName);
         this.validateNotEmpty(this.accessKey, S3ServerData::getAccessKey, S3ServerData::setAccessKey);
         this.validateNotEmpty(this.secretkey, S3ServerData::getSecretkey, S3ServerData::setSecretkey);
+        this.validateNotEmpty(this.serverRegion, S3ServerData::getRegionName, S3ServerData::setRegionName);
 
         this.binder.addStatusChangeListener(e -> this.save.setEnabled(this.binder.isValid()));
         this.add(this.serverName, this.bucketName, this.bucketUrl, this.accessKey, this.secretkey);
@@ -107,7 +116,7 @@ public class S3ServersForm extends AbstractEditForm<S3ServerData> {
         this.binder.readBean(value);
     }
 
-    protected void validateNotEmpty(GeneratedVaadinTextField<?, String> component, ValueProvider<S3ServerData, String> getter, Setter<S3ServerData, String> setter) {
+    protected void validateNotEmpty(AbstractSinglePropertyField<?, String> component, ValueProvider<S3ServerData, String> getter, Setter<S3ServerData, String> setter) {
         this.binder.forField(component)
                 .withValidator(str -> !str.trim().isEmpty(), "Can not be empty")
                 .bind(getter, setter);

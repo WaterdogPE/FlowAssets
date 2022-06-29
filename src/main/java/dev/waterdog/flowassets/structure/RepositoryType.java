@@ -25,4 +25,11 @@ public enum RepositoryType {
     REMOTE_S3("S3 Server");
 
     private final String name;
+
+    public static RepositoryType getTypeFromName(String repositoryName) {
+        if (LOCAL.getName().equals(repositoryName)) {
+            return LOCAL;
+        }
+        return REMOTE_S3;
+    }
 }

@@ -26,8 +26,8 @@ import com.vaadin.flow.data.binder.BeanValidationBinder;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.binder.ValidationException;
 import dev.waterdog.flowassets.repositories.AssetsRepository;
-import dev.waterdog.flowassets.repositories.LocalFileRepository;
-import dev.waterdog.flowassets.repositories.S3ServersRepository;
+import dev.waterdog.flowassets.repositories.storage.StorageRepositoryImpl;
+import dev.waterdog.flowassets.repositories.storage.StoragesRepository;
 import dev.waterdog.flowassets.structure.*;
 import dev.waterdog.flowassets.utils.Helper;
 import dev.waterdog.flowassets.utils.Streams;
@@ -35,7 +35,6 @@ import dev.waterdog.flowassets.views.AssetsView;
 import io.vertx.core.buffer.Buffer;
 import lombok.extern.jbosslog.JBossLog;
 
-import javax.enterprise.inject.spi.CDI;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,7 +44,8 @@ import java.util.UUID;
 public class AssetsForm extends AbstractEditForm<FlowAsset> {
 
     private final AssetsRepository assetsRepository;
-    private final S3ServersRepository serversRepository;
+    private final StoragesRepository storages;
+
     private final AssetsView parent;
 
     private FlowAsset asset = new FlowAsset();
@@ -63,14 +63,14 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
 
     Binder<FlowAsset> binder = new BeanValidationBinder<>(FlowAsset.class);
 
-    public AssetsForm(AssetsView parent, AssetsRepository assetsRepository, S3ServersRepository serversRepository) {
+    public AssetsForm(AssetsView parent, AssetsRepository assetsRepository, StoragesRepository storages) {
         super();
         this.parent = parent;
         this.assetsRepository = assetsRepository;
-        this.serversRepository = serversRepository;
+        this.storages = storages;
 
         List<RepositoryData> servers = new ArrayList<>();
-        for (S3ServerData serverData : serversRepository.getAll()) {
+        for (S3ServerData serverData : storages.getS3ConfigRepository().getAll()) {
             servers.add(new RepositoryData(RepositoryType.REMOTE_S3, serverData.getServerName()));
         }
         servers.add(RepositoryData.LOCAL);
@@ -80,7 +80,7 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
         this.assetLocation.setReadOnly(true);
         this.singleFileUpload.addSucceededListener(this::onUpload);
 
-        this.binder.forField(this.assetRepository).bind(asset -> this.createRepositoryFromName(asset.getAssetRepository(), serversRepository),
+        this.binder.forField(this.assetRepository).bind(asset -> this.createRepositoryFromName(asset.getAssetRepository()),
                 (asset, repository) -> asset.setAssetRepository(repository.getRepositoryName()));
         this.binder.bindInstanceFields(this);
         this.binder.addStatusChangeListener(e -> this.save.setEnabled(this.binder.isValid() && (this.editMode || this.uploaded)));
@@ -120,24 +120,28 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
             return;
         }
 
-        // TODO: get correct repository
-        LocalFileRepository repository = CDI.current().select(LocalFileRepository.class).get();
+        StorageRepositoryImpl storageRepository = this.storages.getStorageRepository(asset.getAssetRepository());
+        if (storageRepository == null) {
+            Helper.errorNotif("Unknown repository: " + asset.getAssetRepository());
+            return;
+        }
+
         FileSnapshot snapshot = this.createFileSnapshot(asset.getUuid());
         if (snapshot == null) {
             Helper.errorNotif("Unable to create asset");
             return;
         }
 
+        // TODO: handle error properly
+
         UI ui = UI.getCurrent();
-        repository.saveFileSnapshot(snapshot).whenComplete((i, error) -> {
+        storageRepository.saveFileSnapshot(snapshot).whenComplete((i, error) -> {
             if (error != null) {
                 Helper.push(ui, () -> Helper.errorNotif("Can not save asset"));
                 log.error("Can not save asset", error);
                 return;
             }
-            String[] namespaces = this.uploadName.split("\\.");
-            String baseUrl = asset.getUuid() + "/" + this.uploadName +
-                    "." + namespaces[namespaces.length - 1];
+            String baseUrl = asset.getUuid() + "/" + this.uploadName;
 
             asset.setAssetLocation(baseUrl);
             this.assetsRepository.save(asset);
@@ -157,10 +161,14 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
 
     @Override
     protected void onDeleteButton(ClickEvent<Button> event, FlowAsset value) {
+        StorageRepositoryImpl storageRepository = this.storages.getStorageRepository(asset.getAssetRepository());
+        if (storageRepository == null) {
+            Helper.errorNotif("Unknown repository: " + asset.getAssetRepository());
+            return;
+        }
+
         UI ui = UI.getCurrent();
-        // TODO: get correct repository
-        LocalFileRepository repository = CDI.current().select(LocalFileRepository.class).get();
-        repository.deleteSnapshots(value.getUuid().toString()).whenComplete((v, error) -> {
+        storageRepository.deleteSnapshots(value.getUuid().toString()).whenComplete((v, error) -> {
            if (error == null) {
                Helper.push(ui, () -> Helper.successNotif("Deleted asset files: " + value.getAssetName()));
            } else {
@@ -203,13 +211,13 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
         this.binder.readBean(value);
     }
 
-    private RepositoryData createRepositoryFromName(String name, S3ServersRepository repository) {
-        if (name == null || name.equals(RepositoryType.LOCAL.getName())) {
+    private RepositoryData createRepositoryFromName(String name) {
+        if (name == null || RepositoryType.getTypeFromName(name) == RepositoryType.LOCAL) {
             return RepositoryData.LOCAL;
         }
 
         S3ServerData serverData;
-        if ((serverData = repository.findByName(name)) == null) {
+        if ((serverData = this.storages.getS3ConfigRepository().findByName(name)) == null) {
             return null;
         }
         return new RepositoryData(RepositoryType.REMOTE_S3, serverData.getServerName());

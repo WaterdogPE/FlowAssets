@@ -26,6 +26,7 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import dev.waterdog.flowassets.repositories.AssetsRepository;
 import dev.waterdog.flowassets.repositories.S3ServersRepository;
+import dev.waterdog.flowassets.repositories.storage.StoragesRepository;
 import dev.waterdog.flowassets.structure.FlowAsset;
 import dev.waterdog.flowassets.views.forms.AssetsForm;
 
@@ -41,13 +42,13 @@ public class AssetsView extends VerticalLayout {
     AssetsForm form;
 
     @Inject
-    public AssetsView(AssetsRepository assetsRepository, S3ServersRepository serversRepository) {
+    public AssetsView(AssetsRepository assetsRepository, StoragesRepository storagesRepository) {
         this.assetsRepository = assetsRepository;
         this.addClassName("list-view");
         this.setSizeFull();
         this.configureGrid();
 
-        this.form = new AssetsForm(this, assetsRepository, serversRepository);
+        this.form = new AssetsForm(this, assetsRepository, storagesRepository);
         this.form.setWidth("25em");
         this.form.setVisible(false);
 

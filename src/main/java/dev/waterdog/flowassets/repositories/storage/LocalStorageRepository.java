@@ -13,9 +13,10 @@
  * limitations under the License.
  */
 
-package dev.waterdog.flowassets.repositories;
+package dev.waterdog.flowassets.repositories.storage;
 
 import dev.waterdog.flowassets.structure.FileSnapshot;
+import dev.waterdog.flowassets.structure.RepositoryType;
 import dev.waterdog.flowassets.utils.Streams;
 import io.netty.buffer.ByteBufInputStream;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -30,7 +31,7 @@ import java.util.Comparator;
 import java.util.concurrent.CompletableFuture;
 
 @Singleton
-public class LocalFileRepository implements FileRepositoryImpl {
+public class LocalStorageRepository implements StorageRepositoryImpl {
 
     @Inject
     @ConfigProperty(name = "flowassets.local-dir")
@@ -83,5 +84,10 @@ public class LocalFileRepository implements FileRepositoryImpl {
                 throw new IllegalStateException("Failed to delete " + uuid, e);
             }
         });
+    }
+
+    @Override
+    public RepositoryType getType() {
+        return RepositoryType.LOCAL;
     }
 }
