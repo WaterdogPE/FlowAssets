@@ -18,6 +18,7 @@ package dev.waterdog.flowassets.utils;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 
 public class Helper {
 
@@ -38,5 +39,17 @@ public class Helper {
         Notification notification = new Notification(message, 3000);
         notification.addThemeVariants(NotificationVariant.LUMO_SUCCESS);
         notification.open();
+    }
+
+    public static String getUserName(JsonWebToken token) {
+        if (token == null) {
+            return "";
+        }
+
+        String name = token.getName();
+        if (name == null) {
+            name = token.getClaim("given_name");
+        }
+        return name == null ? "" : name;
     }
 }

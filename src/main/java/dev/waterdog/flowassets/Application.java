@@ -22,7 +22,7 @@ import com.vaadin.flow.component.page.Push;
 import com.vaadin.flow.theme.Theme;
 
 @Push
-@Theme(value = "breeze", variant = "dark")
+@Theme(value = "default", variant = "dark")
 @CssImport("./themes/default/styles.css")
 @NpmPackage(value = "lumo-css-framework", version = "^4.0.10") // load required packages for theme
 public class Application implements AppShellConfigurator {

@@ -1,1 +1,4 @@
-{"lumoImports":["typography","color","spacing","badge"]}
+{
+  "lumoImports":["typography","color","spacing","badge"],
+  "parent": "breeze"
+}
