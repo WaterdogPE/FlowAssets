@@ -19,6 +19,7 @@ import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.html.Label;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.upload.*;
 import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
@@ -78,6 +79,8 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
         this.assetRepository.setItemLabelGenerator(RepositoryData::getRepositoryName);
 
         this.assetLocation.setReadOnly(true);
+
+        this.singleFileUpload.setDropAllowed(false);
         this.singleFileUpload.addSucceededListener(this::onUpload);
 
         this.binder.forField(this.assetRepository).bind(asset -> this.createRepositoryFromName(asset.getAssetRepository()),

@@ -80,7 +80,10 @@ public class MainView extends AppLayout {
         RouterLink repositoriesLink = new RouterLink("Repositories", S3ServersView.class);
         repositoriesLink.setHighlightCondition(HighlightConditions.sameLocation());
 
-        this.addToDrawer(new VerticalLayout(assetsLink, repositoriesLink));
+        RouterLink secretsLink = new RouterLink("Secrets", SecretsView.class);
+        secretsLink.setHighlightCondition(HighlightConditions.sameLocation());
+
+        this.addToDrawer(new VerticalLayout(assetsLink, repositoriesLink, secretsLink));
     }
 
     private Icon createIcon(VaadinIcon vaadinIcon) {

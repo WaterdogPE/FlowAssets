@@ -18,11 +18,12 @@ package dev.waterdog.flowassets.repositories.storage;
 import dev.waterdog.flowassets.repositories.S3ServersRepository;
 import dev.waterdog.flowassets.structure.RepositoryType;
 import dev.waterdog.flowassets.structure.S3ServerData;
+import dev.waterdog.flowassets.utils.CacheableMap;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @Singleton
 public class StoragesRepository {
@@ -33,7 +34,10 @@ public class StoragesRepository {
     @Inject
     S3ServersRepository s3ConfigRepository;
 
-    private final Map<String, S3StorageRepository> s3Servers = new ConcurrentHashMap<>();
+    private final Map<String, S3StorageRepository> s3Servers = CacheableMap.<String, S3StorageRepository>builder()
+            .timeout(10)
+            .unit(TimeUnit.MINUTES)
+            .build();
 
     public StorageRepositoryImpl getStorageRepository(String storageName) {
         if (RepositoryType.getTypeFromName(storageName) == RepositoryType.LOCAL) {

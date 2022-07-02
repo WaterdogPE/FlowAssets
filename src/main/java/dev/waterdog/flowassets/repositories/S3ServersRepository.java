@@ -15,7 +15,6 @@
 
 package dev.waterdog.flowassets.repositories;
 
-import dev.waterdog.flowassets.structure.FlowAsset;
 import dev.waterdog.flowassets.structure.S3ServerData;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 
@@ -37,20 +36,20 @@ public class S3ServersRepository implements PanacheRepository<S3ServerData> {
     }
 
     @Transactional
-    public void save(S3ServerData asset) {
-        if (this.isPersistent(asset)) {
-            this.persist(asset);
+    public void save(S3ServerData serverData) {
+        if (this.isPersistent(serverData)) {
+            this.persist(serverData);
         } else {
-            this.persist(this.getEntityManager().merge(asset));
+            this.persist(this.getEntityManager().merge(serverData));
         }
     }
 
     @Transactional
-    public void remove(S3ServerData asset) {
-        if (this.isPersistent(asset)) {
-            this.delete(asset);
+    public void remove(S3ServerData serverData) {
+        if (this.isPersistent(serverData)) {
+            this.delete(serverData);
         } else {
-            this.delete(this.getEntityManager().merge(asset));
+            this.delete(this.getEntityManager().merge(serverData));
         }
     }
 }

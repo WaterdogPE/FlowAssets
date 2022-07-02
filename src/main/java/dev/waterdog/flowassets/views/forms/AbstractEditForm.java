@@ -22,10 +22,6 @@ import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
-import com.vaadin.flow.component.textfield.GeneratedVaadinTextField;
-import com.vaadin.flow.data.binder.Setter;
-import com.vaadin.flow.function.ValueProvider;
-import dev.waterdog.flowassets.structure.S3ServerData;
 
 public abstract class AbstractEditForm<T> extends FormLayout {
 
@@ -33,12 +29,17 @@ public abstract class AbstractEditForm<T> extends FormLayout {
     Button delete = new Button("Delete");
     Button close = new Button("Cancel");
 
+    HorizontalLayout buttonsLayout = new HorizontalLayout();
+
     public AbstractEditForm() {
         this.addClassName("contact-form");
     }
 
     protected void addParentComponents() {
-        this.add(this.createButtonsLayout());
+        this.addSaveButton();
+        this.addDeleteButton();
+        this.addCloseButton();
+        this.add(this.buttonsLayout);
     }
 
     public abstract T getValue();
@@ -48,18 +49,24 @@ public abstract class AbstractEditForm<T> extends FormLayout {
     protected abstract void onDeleteButton(ClickEvent<Button> event, T value);
     protected abstract void onExitButton(ClickEvent<Button> event);
 
-    private HorizontalLayout createButtonsLayout() {
-        this.save.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        this.delete.addThemeVariants(ButtonVariant.LUMO_ERROR);
-        this.close.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-
+    protected void addSaveButton() {
         this.save.addClickShortcut(Key.ENTER);
-        this.close.addClickShortcut(Key.ESCAPE);
-
+        this.save.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         this.save.addClickListener(this::validateAndSave);
+        this.buttonsLayout.add(this.save);
+    }
+
+    protected void addDeleteButton() {
+        this.delete.addThemeVariants(ButtonVariant.LUMO_ERROR);
         this.delete.addClickListener(event -> this.onDeleteButton(event, this.getValue()));
+        this.buttonsLayout.add(this.delete);
+    }
+
+    protected void addCloseButton() {
+        this.close.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+        this.close.addClickShortcut(Key.ESCAPE);
         this.close.addClickListener(this::onExitButton);
-        return new HorizontalLayout(this.save, this.delete, this.close);
+        this.buttonsLayout.add(this.close);
     }
 
     protected void validateAndSave(ClickEvent<Button> event) {

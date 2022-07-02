@@ -76,6 +76,13 @@ public class S3ServersForm extends AbstractEditForm<S3ServerData> {
     }
 
     @Override
+    protected void addParentComponents() {
+        this.addSaveButton();
+        this.addCloseButton();
+        this.add(this.buttonsLayout);
+    }
+
+    @Override
     protected void onSaveButton(ClickEvent<Button> event, S3ServerData value) {
         try {
             this.binder.writeBean(value);
@@ -118,7 +125,7 @@ public class S3ServersForm extends AbstractEditForm<S3ServerData> {
 
     protected void validateNotEmpty(AbstractSinglePropertyField<?, String> component, ValueProvider<S3ServerData, String> getter, Setter<S3ServerData, String> setter) {
         this.binder.forField(component)
-                .withValidator(str -> !str.trim().isEmpty(), "Can not be empty")
+                .withValidator(str -> str != null && !str.trim().isEmpty(), "Can not be empty")
                 .bind(getter, setter);
     }
 

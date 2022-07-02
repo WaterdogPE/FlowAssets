@@ -16,6 +16,7 @@
 package dev.waterdog.flowassets.route;
 
 import dev.waterdog.flowassets.repositories.AssetsRepository;
+import dev.waterdog.flowassets.repositories.SecretTokensRepository;
 import dev.waterdog.flowassets.repositories.storage.S3StorageRepository;
 import dev.waterdog.flowassets.repositories.storage.StorageRepositoryImpl;
 import dev.waterdog.flowassets.repositories.storage.StoragesRepository;
@@ -42,7 +43,9 @@ import java.util.concurrent.CompletableFuture;
 @Path("api/")
 @RouteBase(path = "api")
 public class FilesRoute {
-    // TODO: token authentication
+
+    @Inject
+    AccessRouter accessRouter;
 
     @Inject
     StoragesRepository storages;
@@ -50,8 +53,13 @@ public class FilesRoute {
     @Inject
     AssetsRepository assetsRepository;
 
+    @Route(path = "*", order = 0, type = Route.HandlerType.BLOCKING)
+    public void secureRoute(RoutingContext ctx) {
+        this.accessRouter.authorize(ctx);
+    }
+
     @Route(path = "/file/:uuid/:file_name", methods = Route.HttpMethod.GET)
-    void serveLocalFile(RoutingContext ctx) {
+    public void serveLocalFile(RoutingContext ctx) {
         String uuid = ctx.pathParam("uuid");
         String fileName = ctx.pathParam("file_name");
 

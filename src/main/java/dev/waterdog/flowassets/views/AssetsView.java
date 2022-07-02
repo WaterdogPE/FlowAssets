@@ -68,9 +68,9 @@ public class AssetsView extends VerticalLayout {
         this.grid.setSizeFull();
         this.grid.removeAllColumns();
         this.grid.addColumn(FlowAsset::getAssetName)
-                .setHeader("Name");
+                .setHeader("Name").setSortable(true);
         this.grid.addColumn(FlowAsset::getAssetRepository)
-                .setHeader("Repository");
+                .setHeader("Repository").setSortable(true);
         this.grid.addColumn(FlowAsset::getAssetLocation)
                 .setHeader("Location");
         this.grid.getColumns().forEach(col -> col.setAutoWidth(true));
