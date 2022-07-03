@@ -32,6 +32,11 @@ public class AssetsRepository implements PanacheRepository<FlowAsset> {
     }
 
     @Transactional
+    public FlowAsset getByName(String name) {
+        return this.find("asset_name", name.trim()).firstResult();
+    }
+
+    @Transactional
     public FlowAsset findByUuid(String uuid) {
         return this.find("uuid", UUID.fromString(uuid)).firstResult();
     }

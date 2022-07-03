@@ -35,6 +35,14 @@ public class AssetInfoData {
         return response;
     }
 
+    public static AssetInfoData notFoundName(String assetName) {
+        AssetInfoData response = new AssetInfoData();
+        response.setFound(false);
+        response.setValid(false);
+        response.setAssetName(assetName);
+        return response;
+    }
+
     public static AssetInfoData fromAsset(FlowAsset asset) {
         AssetInfoData response = new AssetInfoData();
         response.setValid(true);

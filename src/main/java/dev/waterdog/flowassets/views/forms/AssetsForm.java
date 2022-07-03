@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @JBossLog
 public class AssetsForm extends AbstractEditForm<FlowAsset> {
@@ -112,14 +113,13 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
             return;
         }
 
-        if (!this.assetsRepository.findByName(value.getAssetName()).isEmpty()) {
+        if (this.assetsRepository.getByName(value.getAssetName()) != null) {
             Helper.errorNotif("Asset with name '"+ value.getAssetName() + "' already exists!");
             return;
         }
 
-        FlowAsset asset = this.assetsRepository.save(value);
         if (this.editMode) {
-            this.finishSave(asset);
+            this.finishSave(this.assetsRepository.save(value));
             return;
         }
 
@@ -129,26 +129,24 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
             return;
         }
 
-        FileSnapshot snapshot = this.createFileSnapshot(asset.getUuid());
-        if (snapshot == null) {
+        FileSnapshot snapshot;
+        try {
+            snapshot = FileSnapshot.createSkeleton(this.uploadName, this.memoryBuffer.getInputStream());
+        } catch (IOException e) {
+            log.error("Can not create buffer", e);
             Helper.errorNotif("Unable to create asset");
             return;
         }
 
-        // TODO: handle error properly
-
         UI ui = UI.getCurrent();
-        storageRepository.saveFileSnapshot(snapshot).whenComplete((i, error) -> {
+        CompletableFuture<FlowAsset> future = FlowAsset.uploadAsset(value, snapshot, this.assetsRepository, storageRepository);
+        future.whenComplete((i, error) -> {
             if (error != null) {
                 Helper.push(ui, () -> Helper.errorNotif("Can not save asset"));
                 log.error("Can not save asset", error);
-                return;
+            } else {
+                Helper.push(ui, () -> this.finishSave(asset));
             }
-            String baseUrl = asset.getUuid() + "/" + this.uploadName;
-
-            asset.setAssetLocation(baseUrl);
-            this.assetsRepository.save(asset);
-            Helper.push(ui, () -> this.finishSave(asset));
         });
     }
 
@@ -224,16 +222,5 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
             return null;
         }
         return new RepositoryData(RepositoryType.REMOTE_S3, serverData.getServerName());
-    }
-
-    private FileSnapshot createFileSnapshot(UUID uuid) {
-        Buffer buffer;
-        try {
-            buffer = Streams.readToBuffer(this.memoryBuffer.getInputStream());
-        } catch (IOException e) {
-            log.error("Can not create buffer", e);
-            return null;
-        }
-        return new FileSnapshot(uuid.toString(), this.uploadName, buffer);
     }
 }

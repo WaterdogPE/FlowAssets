@@ -15,15 +15,19 @@
 
 package dev.waterdog.flowassets.structure;
 
+import dev.waterdog.flowassets.repositories.AssetsRepository;
+import dev.waterdog.flowassets.repositories.storage.StorageRepositoryImpl;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import org.apache.commons.lang3.tuple.Pair;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.*;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @Entity
 @ToString(callSuper = true)
@@ -46,4 +50,17 @@ public class FlowAsset extends PanacheEntityBase {
 
     @Column(name = "asset_repository")
     private String assetRepository;
+
+    public static CompletableFuture<FlowAsset> uploadAsset(FlowAsset skeleton, FileSnapshot fileSnapshot,
+                                                      AssetsRepository assetsRepository, StorageRepositoryImpl storageRepository) {
+        return CompletableFuture.supplyAsync(() -> assetsRepository.save(skeleton)).thenApply(asset -> {
+            fileSnapshot.setUuid(asset.getUuid().toString());
+            return Pair.of(asset, fileSnapshot);
+        }).thenCompose(pair -> storageRepository.saveFileSnapshot(pair.getRight()).thenApply(i -> pair))
+                .thenApply(pair -> {
+                    pair.getLeft().setAssetLocation(pair.getLeft().getUuid() + "/" + fileSnapshot.getFileName());
+                    assetsRepository.save(pair.getLeft());
+                    return pair.getLeft();
+                });
+    }
 }

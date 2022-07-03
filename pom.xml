@@ -63,14 +63,7 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-arc</artifactId>
     </dependency>
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-resteasy-reactive</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-resteasy-reactive-jackson</artifactId>
-    </dependency>
+    <!--Database Stuff-->
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-agroal</artifactId>
@@ -81,20 +74,30 @@
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-vertx-web</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-reactive-routes</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.quarkus</groupId>
       <artifactId>quarkus-hibernate-orm-panache</artifactId>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-hibernate-validator</artifactId>
     </dependency>
+    <!--Reactive Stuff-->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-reactive-routes</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-resteasy-reactive</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-resteasy-reactive-jackson</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-vertx-web</artifactId>
+    </dependency>
+    <!--Authentication-->
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-oidc</artifactId>
@@ -105,23 +108,6 @@
       <artifactId>vaadin-quarkus-extension</artifactId>
       <version>${vaadin.version}</version>
     </dependency>
-
-    <!-- The jandex.idx for Vaadin-core annotation indexes
-         automatically included via vaadin-quarkus-extension
-         and is used as an offline reflection library.
-
-         If you want to work with Pro components such GridPro,
-         you can uncomment the following dependency to include the
-         officially provided jandex.idx for them as well: -->
-    <!--
-    <dependency>
-        <groupId>com.vaadin</groupId>
-        <artifactId>vaadin-jandex</artifactId>
-    </dependency>
-    -->
-
-    <!-- Quarkus always pulls in slf4j-jboss-logmanager
-         into target/lib; don't use slf4j-simple -->
     <dependency>
       <groupId>org.jboss.slf4j</groupId>
       <artifactId>slf4j-jboss-logmanager</artifactId>
@@ -132,16 +118,18 @@
       <artifactId>breeze-theme</artifactId>
       <version>1.0.2</version>
     </dependency>
+    <!--Storage-->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>s3</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <!--Extra Dependencies-->
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <version>${lombok.version}</version>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>software.amazon.awssdk</groupId>
-      <artifactId>s3</artifactId>
-      <scope>compile</scope>
     </dependency>
   </dependencies>
 

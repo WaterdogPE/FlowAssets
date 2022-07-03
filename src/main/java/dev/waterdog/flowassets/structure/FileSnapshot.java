@@ -15,12 +15,26 @@
 
 package dev.waterdog.flowassets.structure;
 
+import dev.waterdog.flowassets.utils.Streams;
 import io.vertx.core.buffer.Buffer;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import java.io.IOException;
+import java.io.InputStream;
+
 @Data
+@AllArgsConstructor
 public class FileSnapshot {
-    private final String uuid;
-    private final String fileName;
-    private final Buffer content;
+    private String uuid;
+    private String fileName;
+    private Buffer content;
+
+    public static FileSnapshot createSkeleton(String fileName, InputStream stream) throws IOException {
+        return new FileSnapshot(null, fileName, Streams.readToBuffer(stream));
+    }
+
+    public static FileSnapshot createSkeleton(String fileName, Buffer content) {
+        return new FileSnapshot(null, fileName, content);
+    }
 }

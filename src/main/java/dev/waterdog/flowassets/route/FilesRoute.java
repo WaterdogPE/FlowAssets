@@ -16,28 +16,31 @@
 package dev.waterdog.flowassets.route;
 
 import dev.waterdog.flowassets.repositories.AssetsRepository;
-import dev.waterdog.flowassets.repositories.SecretTokensRepository;
 import dev.waterdog.flowassets.repositories.storage.S3StorageRepository;
-import dev.waterdog.flowassets.repositories.storage.StorageRepositoryImpl;
 import dev.waterdog.flowassets.repositories.storage.StoragesRepository;
 import dev.waterdog.flowassets.structure.FileSnapshot;
 import dev.waterdog.flowassets.structure.FlowAsset;
 import dev.waterdog.flowassets.structure.RepositoryType;
+import dev.waterdog.flowassets.structure.rest.UploadFormData;
 import dev.waterdog.flowassets.structure.rest.AssetInfoData;
+import dev.waterdog.flowassets.structure.rest.UploadResponseData;
 import io.quarkus.vertx.web.Route;
 import io.quarkus.vertx.web.RouteBase;
+import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
+import io.smallrye.mutiny.unchecked.Unchecked;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.web.RoutingContext;
 import lombok.extern.jbosslog.JBossLog;
+import org.jboss.resteasy.reactive.MultipartForm;
 import org.jboss.resteasy.reactive.RestPath;
 
 import javax.inject.Inject;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-import java.util.concurrent.CompletableFuture;
+import java.nio.file.Files;
 
 @JBossLog
 @Path("api/")
@@ -63,55 +66,93 @@ public class FilesRoute {
         String uuid = ctx.pathParam("uuid");
         String fileName = ctx.pathParam("file_name");
 
-        CompletableFuture<FileSnapshot> future = this.storages.getLocalStorage().loadSnapshot(uuid, fileName);
-        future.whenComplete(((snapshot, throwable) -> this.serveSnapshot(ctx, snapshot, throwable)));
-    }
-
-    private void serveSnapshot(RoutingContext ctx, FileSnapshot snapshot, Throwable error) {
-        if (error != null) {
-            ctx.response()
-                    .setStatusCode(Status.INTERNAL_SERVER_ERROR.getStatusCode())
-                    .end();
-            log.error("Failed to server file", error);
-            return;
-        }
-
-        if (snapshot == null) {
-            ctx.response()
-                    .setStatusCode(Status.NOT_FOUND.getStatusCode())
-                    .end();
-            return;
-        }
-
-        ctx.response()
-                .putHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + snapshot.getFileName())
-                .putHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM)
-                .end(snapshot.getContent());
+        Uni.createFrom().completionStage(() -> this.storages.getLocalStorage().loadSnapshot(uuid, fileName))
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
+                .subscribe().with(snapshot -> {
+                    if (snapshot == null) {
+                        ctx.response()
+                                .setStatusCode(Status.NOT_FOUND.getStatusCode())
+                                .end();
+                    } else {
+                        ctx.response()
+                                .putHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + snapshot.getFileName())
+                                .putHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM)
+                                .end(snapshot.getContent());
+                    }
+                }, err -> {
+                    ctx.response()
+                            .setStatusCode(Status.INTERNAL_SERVER_ERROR.getStatusCode())
+                            .end();
+                    log.error("Failed to server file", err);
+                });
     }
 
     @GET
-    @Path("asset/{uuid}")
+    @Path("asset/uuid/{uuid}")
     @Produces(MediaType.APPLICATION_JSON)
-    public CompletableFuture<AssetInfoData> assetInfo(@RestPath String uuid) {
-        return CompletableFuture.supplyAsync(() -> {
-            FlowAsset asset = this.assetsRepository.findByUuid(uuid);
-            if (asset == null) {
-                return AssetInfoData.notFound(uuid);
-            }
+    public Uni<AssetInfoData> assetInfoUuid(@RestPath String uuid) {
+        return Uni.createFrom().item(() -> this.assetsRepository.findByUuid(uuid))
+                .flatMap(asset -> {
+                    if (asset == null) {
+                        return Uni.createFrom().item(AssetInfoData.notFound(uuid));
+                    } else {
+                        return this.serverAssetInfo(asset);
+                    }
+                })
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+    }
 
-            AssetInfoData response = AssetInfoData.fromAsset(asset);
-            StorageRepositoryImpl storage = this.storages.getStorageRepository(asset.getAssetRepository());
+    @GET
+    @Path("asset/name/{name}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Uni<AssetInfoData> assetInfoName(@RestPath String name) {
+        return Uni.createFrom().item(() -> this.assetsRepository.getByName(name))
+                .flatMap(asset -> {
+                    if (asset == null) {
+                        return Uni.createFrom().item(AssetInfoData.notFoundName(name));
+                    } else {
+                        return this.serverAssetInfo(asset);
+                    }
+                })
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+    }
+
+    private Uni<AssetInfoData> serverAssetInfo(FlowAsset asset) {
+        return Uni.createFrom().item(() -> this.storages.getStorageRepository(asset.getAssetRepository()))
+                .map(storage -> {
+                    AssetInfoData response = AssetInfoData.fromAsset(asset);
+                    if (storage == null) {
+                        response.setValid(false);
+                    } else if (storage.getType() == RepositoryType.LOCAL) {
+                        response.setDownloadLink("/" + asset.getAssetLocation());
+                    } else {
+                        String[] namespace = asset.getAssetLocation().split("/");
+                        String fileName = namespace[namespace.length - 1];
+                        response.setDownloadLink(((S3StorageRepository) storage).createDownloadUrl(asset.getUuid().toString(), fileName).toString());
+                    }
+                    return response;
+                });
+    }
+
+    @POST
+    @Path("asset/upload")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Uni<Response> assetCreate(@MultipartForm UploadFormData form) {
+        return Uni.createFrom().item(() -> this.storages.getStorageRepository(form.getRepositoryName())).flatMap(storage -> {
             if (storage == null) {
-                response.setValid(false);
-            } else if (storage.getType() == RepositoryType.LOCAL) {
-                response.setDownloadLink("/" + asset.getAssetLocation());
-            } else {
-                String[] namespace = asset.getAssetLocation().split("/");
-                String fileName = namespace[namespace.length - 1];
-                response.setDownloadLink(((S3StorageRepository) storage).createDownloadUrl(asset.getUuid().toString(), fileName).toString());
+                return Uni.createFrom().item(Response.ok(UploadResponseData.error("invalid storage")).build());
             }
-            return response;
-        });
 
+            return Uni.createFrom().item(Unchecked.supplier(() -> FileSnapshot.createSkeleton(form.getAttachment().fileName(), Files.newInputStream(form.getAttachment().filePath()))))
+                    .flatMap(snapshot -> {
+                        FlowAsset skeleton = new FlowAsset();
+                        skeleton.setAssetName(form.getAssetName());
+                        skeleton.setAssetRepository(form.getRepositoryName());
+                        return Uni.createFrom().completionStage(FlowAsset.uploadAsset(skeleton, snapshot, this.assetsRepository, storage))
+                                .map(asset -> Response.ok(UploadResponseData.ok(asset.getAssetName(), asset.getUuid().toString())).build());
+                    });
+        }).onFailure().invoke(err -> Response.status(Status.INTERNAL_SERVER_ERROR).build())
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 }
