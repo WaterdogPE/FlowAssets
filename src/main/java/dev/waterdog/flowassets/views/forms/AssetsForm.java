@@ -169,17 +169,15 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
         }
 
         UI ui = UI.getCurrent();
-        storageRepository.deleteSnapshots(value.getUuid().toString()).whenComplete((v, error) -> {
-           if (error == null) {
-               Helper.push(ui, () -> Helper.successNotif("Deleted asset files: " + value.getAssetName()));
-           } else {
-               Helper.push(ui, () -> Helper.errorNotif("Can not delete asset files: " + error.getLocalizedMessage()));
-               log.error("Can not delete asset", error);
-           }
+        FlowAsset.deleteAsset(asset, this.assetsRepository, storageRepository).whenComplete((v, error) -> {
+            ui.access(this.parent::updateList);
+            if (error == null) {
+                Helper.push(ui, () -> Helper.successNotif("Deleted asset: " + value.getAssetName()));
+            } else {
+                Helper.push(ui, () -> Helper.errorNotif("Can not delete asset: " + error.getLocalizedMessage()));
+                log.error("Can not delete asset", error);
+            }
         });
-
-        this.assetsRepository.remove(value);
-        this.parent.updateList();
         this.closeForm();
     }
 

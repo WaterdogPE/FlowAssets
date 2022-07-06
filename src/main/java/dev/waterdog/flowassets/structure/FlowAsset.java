@@ -63,4 +63,9 @@ public class FlowAsset extends PanacheEntityBase {
                     return pair.getLeft();
                 });
     }
+
+    public static CompletableFuture<Void> deleteAsset(FlowAsset asset, AssetsRepository assetsRepository, StorageRepositoryImpl storageRepository) {
+        return CompletableFuture.runAsync(() -> storageRepository.deleteSnapshots(asset.getUuid().toString()))
+                .thenRun(() -> assetsRepository.remove(asset));
+    }
 }

@@ -52,4 +52,17 @@ public class Helper {
         }
         return name == null ? "" : name;
     }
+
+    public static String error(String message) {
+        return "{\"status\":\"error\",\"message\":\""+message+"\"}";
+    }
+
+    public static String success(String message) {
+        return "{\"status\":\"ok\",\"message\":\""+message+"\"}";
+    }
+
+    public static String success(String message, String result) {
+        return "{\"status\":\"ok\",\"message\":\""+message+"\",\"result\":\""+result+"\"}";
+    }
+
 }

@@ -16,25 +16,26 @@
 package dev.waterdog.flowassets.route;
 
 import dev.waterdog.flowassets.repositories.AssetsRepository;
-import dev.waterdog.flowassets.repositories.storage.S3StorageRepository;
 import dev.waterdog.flowassets.repositories.storage.StorageRepositoryImpl;
 import dev.waterdog.flowassets.repositories.storage.StoragesRepository;
 import dev.waterdog.flowassets.structure.FileSnapshot;
 import dev.waterdog.flowassets.structure.FlowAsset;
-import dev.waterdog.flowassets.structure.RepositoryType;
 import dev.waterdog.flowassets.structure.rest.UploadFormData;
 import dev.waterdog.flowassets.structure.rest.AssetInfoData;
 import dev.waterdog.flowassets.structure.rest.UploadResponseData;
+import dev.waterdog.flowassets.utils.Helper;
 import io.quarkus.vertx.web.Route;
 import io.quarkus.vertx.web.RouteBase;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
+import io.smallrye.mutiny.tuples.Tuple2;
 import io.smallrye.mutiny.unchecked.Unchecked;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.web.RoutingContext;
 import lombok.extern.jbosslog.JBossLog;
 import org.jboss.resteasy.reactive.MultipartForm;
 import org.jboss.resteasy.reactive.RestPath;
+import org.jboss.resteasy.reactive.RestQuery;
 
 import javax.inject.Inject;
 import javax.ws.rs.*;
@@ -46,7 +47,7 @@ import java.nio.file.Files;
 @JBossLog
 @Path("api/")
 @RouteBase(path = "api")
-public class FilesRoute {
+public class ApiRoute {
 
     @Inject
     AccessRouter accessRouter;
@@ -151,5 +152,19 @@ public class FilesRoute {
                     });
         }).onFailure().invoke(err -> Response.status(Status.INTERNAL_SERVER_ERROR).build())
                 .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+    }
+
+    @GET
+    @Path("asset/delete")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Uni<Response> assetDelete(@RestQuery String uuid) {
+         return Uni.createFrom().item(() -> this.assetsRepository.findByUuid(uuid))
+                 .onItem().ifNotNull().transform(asset -> Tuple2.of(asset, this.storages.getStorageRepository(asset.getAssetRepository())))
+                 .onItem().ifNotNull().transformToUni(tuple ->
+                         Uni.createFrom().completionStage(FlowAsset.deleteAsset(tuple.getItem1(), this.assetsRepository, tuple.getItem2()))
+                                 .map(v -> Response.ok(Helper.success(uuid, tuple.getItem1().getAssetName())).build()))
+                 .onItem().ifNull().continueWith(() -> Response.ok(Helper.error("not found")).build())
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+
     }
 }
