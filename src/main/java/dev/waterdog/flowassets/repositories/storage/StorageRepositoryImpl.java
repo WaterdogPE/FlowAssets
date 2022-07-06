@@ -16,6 +16,7 @@
 package dev.waterdog.flowassets.repositories.storage;
 
 import dev.waterdog.flowassets.structure.FileSnapshot;
+import dev.waterdog.flowassets.structure.FlowAsset;
 import dev.waterdog.flowassets.structure.RepositoryType;
 
 import java.util.concurrent.CompletableFuture;
@@ -26,4 +27,16 @@ public interface StorageRepositoryImpl {
     CompletableFuture<FileSnapshot> loadSnapshot(String uuid, String fileName);
     CompletableFuture<Void> deleteSnapshots(String uuid);
     RepositoryType getType();
+
+    static String createDownloadUrl(FlowAsset asset, StorageRepositoryImpl storage) {
+        return switch (storage.getType()) {
+            case LOCAL -> "/api/file/" + asset.getAssetLocation();
+            case REMOTE_S3 -> {
+                String[] namespace = asset.getAssetLocation().split("/");
+                String fileName = namespace[namespace.length - 1];
+                yield ((S3StorageRepository) storage).createDownloadUrl(asset.getUuid().toString(), fileName).toString();
+            }
+        };
+
+    }
 }

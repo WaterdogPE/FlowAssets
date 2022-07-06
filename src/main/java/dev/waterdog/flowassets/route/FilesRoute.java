@@ -17,6 +17,7 @@ package dev.waterdog.flowassets.route;
 
 import dev.waterdog.flowassets.repositories.AssetsRepository;
 import dev.waterdog.flowassets.repositories.storage.S3StorageRepository;
+import dev.waterdog.flowassets.repositories.storage.StorageRepositoryImpl;
 import dev.waterdog.flowassets.repositories.storage.StoragesRepository;
 import dev.waterdog.flowassets.structure.FileSnapshot;
 import dev.waterdog.flowassets.structure.FlowAsset;
@@ -123,12 +124,8 @@ public class FilesRoute {
                     AssetInfoData response = AssetInfoData.fromAsset(asset);
                     if (storage == null) {
                         response.setValid(false);
-                    } else if (storage.getType() == RepositoryType.LOCAL) {
-                        response.setDownloadLink("/" + asset.getAssetLocation());
                     } else {
-                        String[] namespace = asset.getAssetLocation().split("/");
-                        String fileName = namespace[namespace.length - 1];
-                        response.setDownloadLink(((S3StorageRepository) storage).createDownloadUrl(asset.getUuid().toString(), fileName).toString());
+                        response.setDownloadLink(StorageRepositoryImpl.createDownloadUrl(asset, storage));
                     }
                     return response;
                 });

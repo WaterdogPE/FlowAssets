@@ -16,7 +16,13 @@
 package dev.waterdog.flowassets.views;
 
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.html.Anchor;
+import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -25,7 +31,7 @@ import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import dev.waterdog.flowassets.repositories.AssetsRepository;
-import dev.waterdog.flowassets.repositories.S3ServersRepository;
+import dev.waterdog.flowassets.repositories.storage.StorageRepositoryImpl;
 import dev.waterdog.flowassets.repositories.storage.StoragesRepository;
 import dev.waterdog.flowassets.structure.FlowAsset;
 import dev.waterdog.flowassets.views.forms.AssetsForm;
@@ -36,6 +42,7 @@ import javax.inject.Inject;
 @Route(value = "assets", layout = MainView.class)
 public class AssetsView extends VerticalLayout {
     private final AssetsRepository assetsRepository;
+    private final StoragesRepository storagesRepository;
 
     Grid<FlowAsset> grid = new Grid<>(FlowAsset.class);
     TextField nameFilter = new TextField();
@@ -44,6 +51,7 @@ public class AssetsView extends VerticalLayout {
     @Inject
     public AssetsView(AssetsRepository assetsRepository, StoragesRepository storagesRepository) {
         this.assetsRepository = assetsRepository;
+        this.storagesRepository = storagesRepository;
         this.addClassName("list-view");
         this.setSizeFull();
         this.configureGrid();
@@ -73,6 +81,15 @@ public class AssetsView extends VerticalLayout {
                 .setHeader("Repository").setSortable(true);
         this.grid.addColumn(FlowAsset::getAssetLocation)
                 .setHeader("Location");
+
+        this.grid.addComponentColumn(asset -> {
+            Button button = new Button(new Icon(VaadinIcon.DOWNLOAD));
+            button.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_SMALL);
+            button.addClickListener(e -> this.downloadDialog(asset));
+            button.getElement().setAttribute("aria-label", "Download");
+            return button;
+        });
+
         this.grid.getColumns().forEach(col -> col.setAutoWidth(true));
         this.grid.asSingleSelect().addValueChangeListener(event -> this.editContact(event.getValue(), false));
     }
@@ -104,6 +121,25 @@ public class AssetsView extends VerticalLayout {
             this.form.setVisible(true);
             this.addClassName("editing");
         }
+    }
+
+    private void downloadDialog(FlowAsset asset) {
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle("Download Asset");
+
+        StorageRepositoryImpl storage = this.storagesRepository.getStorageRepository(asset.getAssetRepository());
+        if (storage == null) {
+            dialog.add(new Paragraph("Asset has invalid storage: " + asset.getAssetRepository()));
+        } else {
+            Button button = new Button("Download", (e) -> dialog.close());
+            button.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+            button.getStyle().set("margin-right", "auto");
+            dialog.getFooter().add(button);
+            dialog.getFooter().add(new Anchor(StorageRepositoryImpl.createDownloadUrl(asset, storage), button));
+            dialog.add(new Paragraph("You can download the asset files here:"));
+        }
+
+        dialog.open();
     }
 
     public void updateList() {
