@@ -15,6 +15,7 @@
 
 package dev.waterdog.flowassets.views;
 
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.html.H2;
@@ -23,7 +24,8 @@ import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
-import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.tabs.Tab;
+import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.router.HighlightConditions;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
@@ -32,6 +34,7 @@ import io.quarkus.oidc.IdToken;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 
 import javax.inject.Inject;
+import java.util.function.Consumer;
 
 @Route("")
 public class MainView extends AppLayout {
@@ -74,19 +77,28 @@ public class MainView extends AppLayout {
     }
 
     private void createMenu() {
-        RouterLink assetsLink = new RouterLink("Assets", AssetsView.class);
-        assetsLink.setHighlightCondition(HighlightConditions.sameLocation());
+        Tabs tabs = new Tabs();
+        Tab assets = this.createPageTab("Assets", AssetsView.class, VaadinIcon.DOWNLOAD, tabs::setSelectedTab);
+        Tab paths = this.createPageTab("Deploy Paths", DeployPathsView.class, VaadinIcon.PLAY, tabs::setSelectedTab);
+        Tab repositories = this.createPageTab("Repositories", S3ServersView.class, VaadinIcon.STORAGE, tabs::setSelectedTab);
+        Tab secrets = this.createPageTab("Secrets", SecretsView.class, VaadinIcon.BOOK, tabs::setSelectedTab);
 
-        RouterLink pathsLink = new RouterLink("Deploy Paths", DeployPathsView.class);
-        pathsLink.setHighlightCondition(HighlightConditions.sameLocation());
+        tabs.add(assets, paths, repositories, secrets);
+        tabs.setOrientation(Tabs.Orientation.VERTICAL);
+        this.addToDrawer(tabs);
+    }
 
-        RouterLink repositoriesLink = new RouterLink("Repositories", S3ServersView.class);
-        repositoriesLink.setHighlightCondition(HighlightConditions.sameLocation());
-
-        RouterLink secretsLink = new RouterLink("Secrets", SecretsView.class);
-        secretsLink.setHighlightCondition(HighlightConditions.sameLocation());
-
-        this.addToDrawer(new VerticalLayout(assetsLink, pathsLink, repositoriesLink, secretsLink));
+    private Tab createPageTab(String name, Class<? extends Component> navigationTarget, VaadinIcon icon, Consumer<Tab> callback) {
+        Tab tab = new Tab(icon.create());
+        RouterLink routerLink = new RouterLink(name, navigationTarget);
+        routerLink.setHighlightCondition(HighlightConditions.sameLocation());
+        routerLink.setHighlightAction((link, highlight) -> {
+            if (highlight) {
+                callback.accept(tab);
+            }
+        });
+        tab.add(routerLink);
+        return tab;
     }
 
     private Icon createIcon(VaadinIcon vaadinIcon) {
