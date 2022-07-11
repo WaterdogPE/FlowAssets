@@ -77,13 +77,16 @@ public class MainView extends AppLayout {
         RouterLink assetsLink = new RouterLink("Assets", AssetsView.class);
         assetsLink.setHighlightCondition(HighlightConditions.sameLocation());
 
+        RouterLink pathsLink = new RouterLink("Deploy Paths", DeployPathsView.class);
+        pathsLink.setHighlightCondition(HighlightConditions.sameLocation());
+
         RouterLink repositoriesLink = new RouterLink("Repositories", S3ServersView.class);
         repositoriesLink.setHighlightCondition(HighlightConditions.sameLocation());
 
         RouterLink secretsLink = new RouterLink("Secrets", SecretsView.class);
         secretsLink.setHighlightCondition(HighlightConditions.sameLocation());
 
-        this.addToDrawer(new VerticalLayout(assetsLink, repositoriesLink, secretsLink));
+        this.addToDrawer(new VerticalLayout(assetsLink, pathsLink, repositoriesLink, secretsLink));
     }
 
     private Icon createIcon(VaadinIcon vaadinIcon) {

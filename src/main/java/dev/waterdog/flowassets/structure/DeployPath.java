@@ -15,26 +15,27 @@
 
 package dev.waterdog.flowassets.structure;
 
-import lombok.AllArgsConstructor;
+import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
-@Getter
-@AllArgsConstructor
-public enum RepositoryType {
-    LOCAL("Localhost"),
-    REMOTE_S3("S3 Server");
+import javax.persistence.*;
+import java.util.List;
 
-    private final String name;
-    private final String saveName;
+@Entity
+@Getter @Setter
+@ToString(callSuper = true)
+@Table(name = "deploy_paths")
+public class DeployPath extends PanacheEntity {
 
-    RepositoryType(String name) {
-        this(name, name.toLowerCase());
-    }
+    @Column(name = "name")
+    private String name;
 
-    public static RepositoryType getTypeFromName(String repositoryName) {
-        if (LOCAL.getSaveName().equals(repositoryName)) {
-            return LOCAL;
-        }
-        return REMOTE_S3;
-    }
+    @Column(name = "deploy_path")
+    private String path;
+
+    @ToString.Exclude
+    @OneToMany(mappedBy = "deployPath", fetch = FetchType.LAZY)
+    private List<FlowAsset> assets;
 }

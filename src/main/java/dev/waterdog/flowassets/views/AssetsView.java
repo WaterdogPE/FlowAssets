@@ -27,10 +27,14 @@ import com.vaadin.flow.component.orderedlayout.FlexLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.data.provider.DataProvider;
+import com.vaadin.flow.data.provider.ListDataProvider;
+import com.vaadin.flow.data.provider.Query;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import dev.waterdog.flowassets.repositories.AssetsRepository;
+import dev.waterdog.flowassets.repositories.DeployPathsRepository;
 import dev.waterdog.flowassets.repositories.storage.StorageRepositoryImpl;
 import dev.waterdog.flowassets.repositories.storage.StoragesRepository;
 import dev.waterdog.flowassets.structure.FlowAsset;
@@ -49,14 +53,15 @@ public class AssetsView extends VerticalLayout {
     AssetsForm form;
 
     @Inject
-    public AssetsView(AssetsRepository assetsRepository, StoragesRepository storagesRepository) {
+    public AssetsView(AssetsRepository assetsRepository, StoragesRepository storagesRepository,
+                      DeployPathsRepository pathsRepository) {
         this.assetsRepository = assetsRepository;
         this.storagesRepository = storagesRepository;
         this.addClassName("list-view");
         this.setSizeFull();
         this.configureGrid();
 
-        this.form = new AssetsForm(this, assetsRepository, storagesRepository);
+        this.form = new AssetsForm(this, assetsRepository, storagesRepository, pathsRepository);
         this.form.setWidth("25em");
         this.form.setVisible(false);
 
@@ -67,8 +72,6 @@ public class AssetsView extends VerticalLayout {
         content.addClassNames("content", "gap-m");
         content.setSizeFull();
         this.add(this.getToolbar(), content);
-
-        this.updateList("");
     }
 
     private void configureGrid() {
@@ -77,10 +80,12 @@ public class AssetsView extends VerticalLayout {
         this.grid.removeAllColumns();
         this.grid.addColumn(FlowAsset::getAssetName)
                 .setHeader("Name").setSortable(true);
+        this.grid.addColumn(FlowAsset::getUuid)
+                .setHeader("UUID");
+        this.grid.addColumn(asset -> asset.getDeployPath() == null ? "None" : asset.getDeployPath().getName())
+                .setHeader("Deploy Path");
         this.grid.addColumn(FlowAsset::getAssetRepository)
                 .setHeader("Repository").setSortable(true);
-        this.grid.addColumn(FlowAsset::getAssetLocation)
-                .setHeader("Location");
 
         this.grid.addComponentColumn(asset -> {
             Button button = new Button(new Icon(VaadinIcon.DOWNLOAD));
@@ -90,6 +95,11 @@ public class AssetsView extends VerticalLayout {
             return button;
         });
 
+        this.grid.setItems(DataProvider.fromCallbacks(query ->
+                        this.assetsRepository.findByName(this.nameFilter.getValue(), query.getPage(), query.getPageSize()).stream(),
+                query -> (int) this.assetsRepository.countByName(this.nameFilter.getValue())));
+
+
         this.grid.getColumns().forEach(col -> col.setAutoWidth(true));
         this.grid.asSingleSelect().addValueChangeListener(event -> this.editContact(event.getValue(), false));
     }
@@ -98,7 +108,7 @@ public class AssetsView extends VerticalLayout {
         this.nameFilter.setPlaceholder("Filter by name...");
         this.nameFilter.setClearButtonVisible(true);
         this.nameFilter.setValueChangeMode(ValueChangeMode.LAZY);
-        this.nameFilter.addValueChangeListener(e -> this.updateList(e.getValue()));
+        this.nameFilter.addValueChangeListener(e -> this.updateList());
 
         Button button = new Button("Add Asset");
         button.addClickListener(click -> this.addContact());
@@ -143,11 +153,6 @@ public class AssetsView extends VerticalLayout {
     }
 
     public void updateList() {
-        String filter = this.nameFilter.getValue();
-        this.grid.setItems(this.assetsRepository.findByName(filter));
-    }
-
-    public void updateList(String filter) {
-        this.grid.setItems(this.assetsRepository.findByName(filter));
+        this.grid.getDataProvider().refreshAll();
     }
 }

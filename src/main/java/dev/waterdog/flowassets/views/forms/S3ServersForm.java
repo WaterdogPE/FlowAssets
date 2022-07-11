@@ -118,7 +118,7 @@ public class S3ServersForm extends AbstractEditForm<S3ServerData> {
     }
 
     @Override
-    public void setValue(S3ServerData value) {
+    protected void setValue0(S3ServerData value) {
         this.asset = value;
         this.binder.readBean(value);
     }

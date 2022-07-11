@@ -51,6 +51,11 @@ public class FlowAsset extends PanacheEntityBase {
     @Column(name = "asset_repository")
     private String assetRepository;
 
+    @ToString.Exclude
+    @ManyToOne(optional = true)
+    @JoinColumn(name = "path_id", referencedColumnName = "id")
+    private DeployPath deployPath;
+
     public static CompletableFuture<FlowAsset> uploadAsset(FlowAsset skeleton, FileSnapshot fileSnapshot,
                                                       AssetsRepository assetsRepository, StorageRepositoryImpl storageRepository) {
         return CompletableFuture.supplyAsync(() -> assetsRepository.save(skeleton)).thenApply(asset -> {

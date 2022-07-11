@@ -43,11 +43,20 @@ public abstract class AbstractEditForm<T> extends FormLayout {
     }
 
     public abstract T getValue();
-    public abstract void setValue(T value);
+    protected abstract void setValue0(T value);
+
+    public final void setValue(T value) {
+        this.setValue0(value);
+        this.adjustComponents();
+    }
 
     protected abstract void onSaveButton(ClickEvent<Button> event, T value);
     protected abstract void onDeleteButton(ClickEvent<Button> event, T value);
     protected abstract void onExitButton(ClickEvent<Button> event);
+
+    protected void adjustComponents() {
+        // Run when setting new value
+    }
 
     protected void addSaveButton() {
         this.save.addClickShortcut(Key.ENTER);

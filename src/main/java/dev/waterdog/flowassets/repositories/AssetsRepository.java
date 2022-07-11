@@ -32,6 +32,16 @@ public class AssetsRepository implements PanacheRepository<FlowAsset> {
     }
 
     @Transactional
+    public long countByName(String name) {
+        return this.find("asset_name like ?1", "%" + name.trim() + "%").count();
+    }
+
+    @Transactional
+    public List<FlowAsset> findByName(String name, int pageIndex, int pageSize) {
+        return this.find("asset_name like ?1", "%" + name.trim() + "%").page(pageIndex, pageSize).list();
+    }
+
+    @Transactional
     public FlowAsset getByName(String name) {
         return this.find("asset_name", name.trim()).firstResult();
     }
@@ -44,7 +54,7 @@ public class AssetsRepository implements PanacheRepository<FlowAsset> {
     @Transactional
     public FlowAsset save(FlowAsset asset) {
         if (!this.isPersistent(asset)) {
-            asset = this.getEntityManager().merge(asset);;
+            asset = this.getEntityManager().merge(asset);
         }
 
         this.persist(asset);

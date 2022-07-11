@@ -15,10 +15,19 @@
 
 package dev.waterdog.flowassets.utils;
 
+import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+
+import java.util.function.Consumer;
 
 public class Helper {
 
@@ -39,6 +48,24 @@ public class Helper {
         Notification notification = new Notification(message, 3000);
         notification.addThemeVariants(NotificationVariant.LUMO_SUCCESS);
         notification.open();
+    }
+
+    public static void infoDialog(String title, String text, Consumer<Dialog.DialogCloseActionEvent> callback) {
+        infoDialog(title, callback, new Html("<p>" + text.replace("\n", "<br>") + "</p>"));
+    }
+
+    public static void infoDialog(String title, Consumer<Dialog.DialogCloseActionEvent> callback, Component... components) {
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle(title);
+
+        Button closeButton = new Button(new Icon(VaadinIcon.CLOSE_SMALL));
+        closeButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);;
+        closeButton.addClickListener(e -> dialog.close());
+        dialog.getHeader().add(closeButton);
+
+        dialog.add(components);
+        dialog.addDialogCloseActionListener(callback::accept);
+        dialog.open();
     }
 
     public static String getUserName(JsonWebToken token) {

@@ -120,7 +120,7 @@ public class SecretsForm extends AbstractEditForm<SecretToken> {
     }
 
     @Override
-    public void setValue(SecretToken value) {
+    protected void setValue0(SecretToken value) {
         this.asset = value;
         this.binder.readBean(value);
     }

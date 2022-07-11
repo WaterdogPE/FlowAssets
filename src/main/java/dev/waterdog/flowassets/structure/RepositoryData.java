@@ -20,7 +20,7 @@ import lombok.Data;
 @Data
 public class RepositoryData {
 
-    public static final RepositoryData LOCAL = new RepositoryData(RepositoryType.LOCAL, RepositoryType.LOCAL.getName());
+    public static final RepositoryData LOCAL = new RepositoryData(RepositoryType.LOCAL, RepositoryType.LOCAL.getSaveName());
 
     private final RepositoryType type;
     private final String repositoryName;
