@@ -83,7 +83,7 @@ public class AssetsView extends VerticalLayout {
         this.grid.addColumn(FlowAsset::getUuid)
                 .setHeader("UUID");
         this.grid.addColumn(asset -> asset.getDeployPath() == null ? "None" : asset.getDeployPath().getName())
-                .setHeader("Deploy Path");
+                .setHeader("Deploy Path").setSortable(true);
         this.grid.addColumn(FlowAsset::getAssetRepository)
                 .setHeader("Repository").setSortable(true);
 
