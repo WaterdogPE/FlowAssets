@@ -25,6 +25,9 @@ import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
 import com.vaadin.flow.data.binder.BeanValidationBinder;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.binder.ValidationException;
+import com.vaadin.flow.data.provider.CallbackDataProvider;
+import com.vaadin.flow.data.provider.DataProvider;
+import dev.waterdog.flowassets.repositories.AbstractRepository;
 import dev.waterdog.flowassets.repositories.AssetsRepository;
 import dev.waterdog.flowassets.repositories.DeployPathsRepository;
 import dev.waterdog.flowassets.repositories.storage.StorageRepositoryImpl;
@@ -40,6 +43,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 @JBossLog
 public class AssetsForm extends AbstractEditForm<FlowAsset> {
@@ -77,27 +81,23 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
         this.storages = storages;
         this.pathsRepository = pathsRepository;
 
-        List<PathData> deployPaths = new ArrayList<>();
-        deployPaths.add(NO_PATH_DATA);
-        for (DeployPath deployPath : pathsRepository.getAll()) {
-            deployPaths.add(new PathData(deployPath.getName(), deployPath));
-        }
-        this.deployPath.setItems(deployPaths);
-        this.deployPath.setItemLabelGenerator(PathData::getPathName);
-
-        List<RepositoryData> servers = new ArrayList<>();
-        for (S3ServerData serverData : storages.getS3ConfigRepository().getAll()) {
-            servers.add(new RepositoryData(RepositoryType.REMOTE_S3, serverData.getServerName()));
-        }
-        servers.add(RepositoryData.LOCAL);
-        this.assetRepository.setItems(servers);
-        this.assetRepository.setItemLabelGenerator(RepositoryData::getRepositoryName);
-
+        // Init components
         this.assetLocation.setReadOnly(true);
+
+        this.deployPath.setItemLabelGenerator(PathData::getPathName);
+        this.deployPath.setItems(AbstractRepository.createDataprovider(this.pathsRepository, stream -> stream.map(path -> new PathData(path.getName(), path))));
+
+        this.assetRepository.setItemLabelGenerator(RepositoryData::getRepositoryName);
+        this.assetRepository.setItems(AbstractRepository.createDataprovider(this.storages.getS3ConfigRepository(), stream -> {
+            Stream<RepositoryData> repositoryStream = stream
+                    .map(serverData -> new RepositoryData(RepositoryType.REMOTE_S3, serverData.getServerName()));
+            return Stream.concat(repositoryStream, Stream.of(RepositoryData.LOCAL));
+        }));
 
         this.singleFileUpload.setDropAllowed(false);
         this.singleFileUpload.addSucceededListener(this::onUpload);
 
+        // Bind form
         this.binder.forField(this.assetRepository).bind(asset -> this.createRepositoryFromName(asset.getAssetRepository()),
                 (asset, repository) -> asset.setAssetRepository(repository.getRepositoryName()));
         this.binder.forField(this.deployPath).bind(this::createPathDataFromAsset,
@@ -110,6 +110,15 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
 
     @Override
     protected void adjustComponents() {
+        if (this.getValue() == null) {
+            this.setVisible(false);
+            this.parent.removeClassName("editing");
+        } else {
+            this.setVisible(true);
+            this.parent.addClassName("editing");
+        }
+
+        this.singleFileUpload.clearFileList();
         this.assetRepository.setReadOnly(this.editMode); // Can not change repository once created
         this.assetLocation.setVisible(this.editMode); // Only show location when file is uploaded
     }
@@ -210,9 +219,6 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
 
     public void closeForm() {
         this.setValue(null);
-        this.setVisible(false);
-        this.parent.removeClassName("editing");
-        this.singleFileUpload.clearFileList();
     }
 
     @Override
@@ -237,7 +243,7 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
         }
 
         S3ServerData serverData;
-        if ((serverData = this.storages.getS3ConfigRepository().findByName(name)) == null) {
+        if ((serverData = this.storages.getS3ConfigRepository().getByName(name)) == null) {
             return null;
         }
         return new RepositoryData(RepositoryType.REMOTE_S3, serverData.getServerName());

@@ -16,40 +16,14 @@
 package dev.waterdog.flowassets.repositories;
 
 import dev.waterdog.flowassets.structure.S3ServerData;
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
 
 import javax.enterprise.context.ApplicationScoped;
-import javax.transaction.Transactional;
-import java.util.List;
 
 @ApplicationScoped
-public class S3ServersRepository implements PanacheRepository<S3ServerData> {
+public class S3ServersRepository extends AbstractRepository<S3ServerData> {
 
-    @Transactional
-    public List<S3ServerData> getAll() {
-        return this.listAll();
-    }
-
-    @Transactional
-    public S3ServerData findByName(String name) {
-        return find("name", name.trim()).firstResult();
-    }
-
-    @Transactional
-    public void save(S3ServerData serverData) {
-        if (this.isPersistent(serverData)) {
-            this.persist(serverData);
-        } else {
-            this.persist(this.getEntityManager().merge(serverData));
-        }
-    }
-
-    @Transactional
-    public void remove(S3ServerData serverData) {
-        if (this.isPersistent(serverData)) {
-            this.delete(serverData);
-        } else {
-            this.delete(this.getEntityManager().merge(serverData));
-        }
+    @Override
+    public String nameIdentifier() {
+        return "name";
     }
 }

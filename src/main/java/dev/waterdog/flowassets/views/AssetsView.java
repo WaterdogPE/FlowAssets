@@ -128,8 +128,6 @@ public class AssetsView extends VerticalLayout {
             this.form.closeForm();
         } else {
             this.form.setValue(asset, create);
-            this.form.setVisible(true);
-            this.addClassName("editing");
         }
     }
 

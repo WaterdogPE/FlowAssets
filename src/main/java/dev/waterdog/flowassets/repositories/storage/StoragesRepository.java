@@ -47,7 +47,7 @@ public class StoragesRepository {
     }
 
     private S3StorageRepository createS3Storage(String name) {
-        S3ServerData serverData = this.s3ConfigRepository.findByName(name);
+        S3ServerData serverData = this.s3ConfigRepository.getByName(name);
         if (serverData == null) {
             return null;
         }

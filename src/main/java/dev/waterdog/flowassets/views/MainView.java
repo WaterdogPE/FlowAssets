@@ -27,21 +27,17 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.router.HighlightConditions;
-import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
 import dev.waterdog.flowassets.utils.Helper;
-import io.quarkus.oidc.IdToken;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 
-import javax.inject.Inject;
+import javax.enterprise.inject.spi.CDI;
 import java.util.function.Consumer;
 
-@Route("")
 public class MainView extends AppLayout {
 
-    @Inject
-    @IdToken
-    JsonWebToken idToken;
+    // @Inject won't work here
+    private final JsonWebToken idToken = CDI.current().select(JsonWebToken.class).get();
 
     public MainView() {
         this.createHeader();
@@ -78,12 +74,13 @@ public class MainView extends AppLayout {
 
     private void createMenu() {
         Tabs tabs = new Tabs();
+        Tab home = this.createPageTab("Home", HomeView.class, VaadinIcon.HOME, tabs::setSelectedTab);
         Tab assets = this.createPageTab("Assets", AssetsView.class, VaadinIcon.DOWNLOAD, tabs::setSelectedTab);
         Tab paths = this.createPageTab("Deploy Paths", DeployPathsView.class, VaadinIcon.PLAY, tabs::setSelectedTab);
         Tab repositories = this.createPageTab("Repositories", S3ServersView.class, VaadinIcon.STORAGE, tabs::setSelectedTab);
         Tab secrets = this.createPageTab("Secrets", SecretsView.class, VaadinIcon.BOOK, tabs::setSelectedTab);
 
-        tabs.add(assets, paths, repositories, secrets);
+        tabs.add(home, assets, paths, repositories, secrets);
         tabs.setOrientation(Tabs.Orientation.VERTICAL);
         this.addToDrawer(tabs);
     }

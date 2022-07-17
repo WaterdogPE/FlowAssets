@@ -13,26 +13,19 @@
  * limitations under the License.
  */
 
-package dev.waterdog.flowassets.repositories;
+package dev.waterdog.flowassets.views;
 
-import dev.waterdog.flowassets.structure.DeployPath;
-import org.hibernate.Hibernate;
+import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.router.PageTitle;
+import com.vaadin.flow.router.Route;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.transaction.Transactional;
+@PageTitle("FlowAssets | Home")
+@Route(value = "", layout = MainView.class)
+public class HomeView extends VerticalLayout {
 
-@ApplicationScoped
-public class DeployPathsRepository extends AbstractRepository<DeployPath> {
-
-    @Override
-    public String nameIdentifier() {
-        return "name";
+    public HomeView() {
+        this.add(new Paragraph("Soon"));
     }
 
-    @Transactional
-    public DeployPath getInitialized(DeployPath deployPath) {
-        DeployPath merge = this.getEntityManager().merge(deployPath);
-        Hibernate.initialize(merge.getAssets());
-        return merge;
-    }
 }
