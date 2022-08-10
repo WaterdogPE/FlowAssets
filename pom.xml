@@ -4,21 +4,14 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>dev.waterdog.flowassets</groupId>
   <artifactId>flowassets</artifactId>
+  <packaging>pom</packaging>
   <version>1.0.0-SNAPSHOT</version>
+  <modules>
+    <module>server</module>
+  </modules>
 
   <properties>
-    <compiler-plugin.version>3.8.1</compiler-plugin.version>
-    <failsafe.useModulePath>false</failsafe.useModulePath>
-    <maven.compiler.release>17</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-    <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-    <quarkus.platform.version>2.9.2.Final</quarkus.platform.version>
-    <surefire-plugin.version>3.0.0-M5</surefire-plugin.version>
-    <vaadin.version>23.1.0</vaadin.version>
-    <lombok.version>1.18.24</lombok.version>
-    <aws.java.sdk.version>2.16.1</aws.java.sdk.version>
   </properties>
 
   <repositories>
@@ -26,229 +19,19 @@
       <id>waterdog</id>
       <url>https://repo.waterdog.dev/artifactory/main</url>
     </repository>
-    <repository>
-      <id>vaadin-addons</id>
-      <url>https://maven.vaadin.com/vaadin-addons</url>
-    </repository>
   </repositories>
-
-  <pluginRepositories>
-    <!-- The order of definitions matters. Explicitly defining central here to make sure it has the highest priority. -->
-    <pluginRepository>
+  <distributionManagement>
+    <repository>
       <id>central</id>
-      <url>https://repo.maven.apache.org/maven2</url>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-    </pluginRepository>
-    <pluginRepository>
-      <id>vaadin-prereleases</id>
-      <url>
-        https://maven.vaadin.com/vaadin-prereleases/
-      </url>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-    </pluginRepository>
-  </pluginRepositories>
+      <name>waterdog-releases</name>
+      <url>http://repo.waterdog.dev/artifactory/releases</url>
+    </repository>
+    <snapshotRepository>
+      <id>snapshots</id>
+      <name>waterdog-snapshots</name>
+      <url>http://repo.waterdog.dev/artifactory/snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
 
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>${quarkus.platform.group-id}</groupId>
-        <artifactId>${quarkus.platform.artifact-id}</artifactId>
-        <version>${quarkus.platform.version}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.vaadin</groupId>
-        <artifactId>vaadin-bom</artifactId>
-        <type>pom</type>
-        <scope>import</scope>
-        <version>${vaadin.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>software.amazon.awssdk</groupId>
-        <artifactId>bom</artifactId>
-        <version>${aws.java.sdk.version}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
 
-  <dependencies>
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-arc</artifactId>
-    </dependency>
-    <!--Database Stuff-->
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-agroal</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-jdbc-mysql</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-hibernate-orm-panache</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-hibernate-validator</artifactId>
-    </dependency>
-    <!--Reactive Stuff-->
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-reactive-routes</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-resteasy-reactive</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-resteasy-reactive-jackson</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-vertx-web</artifactId>
-    </dependency>
-    <!--Authentication-->
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-oidc</artifactId>
-    </dependency>
-    <!-- The Vaadin Quarkus extension -->
-    <dependency>
-      <groupId>com.vaadin</groupId>
-      <artifactId>vaadin-quarkus-extension</artifactId>
-      <version>${vaadin.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.jboss.slf4j</groupId>
-      <artifactId>slf4j-jboss-logmanager</artifactId>
-      <version>1.1.0.Final</version>
-    </dependency>
-    <dependency>
-      <groupId>org.vaadin.addons.parttio</groupId>
-      <artifactId>breeze-theme</artifactId>
-      <version>1.0.2</version>
-    </dependency>
-    <!--Storage-->
-    <dependency>
-      <groupId>software.amazon.awssdk</groupId>
-      <artifactId>s3</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <!--Extra Dependencies-->
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-      <version>${lombok.version}</version>
-      <scope>provided</scope>
-    </dependency>
-  </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>${quarkus.platform.group-id}</groupId>
-        <artifactId>quarkus-maven-plugin</artifactId>
-        <version>${quarkus.platform.version}</version>
-        <extensions>true</extensions>
-        <executions>
-          <execution>
-            <goals>
-              <goal>build</goal>
-              <goal>generate-code</goal>
-              <goal>generate-code-tests</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>${compiler-plugin.version}</version>
-        <configuration>
-          <compilerArgs>
-            <arg>-parameters</arg>
-          </compilerArgs>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>${surefire-plugin.version}</version>
-        <configuration>
-          <systemPropertyVariables>
-            <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
-            <maven.home>${maven.home}</maven.home>
-          </systemPropertyVariables>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
-  <profiles>
-    <profile>
-      <id>native</id>
-      <activation>
-        <property>
-          <name>native</name>
-        </property>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-failsafe-plugin</artifactId>
-            <version>${surefire-plugin.version}</version>
-            <executions>
-              <execution>
-                <goals>
-                  <goal>integration-test</goal>
-                  <goal>verify</goal>
-                </goals>
-                <configuration>
-                  <systemPropertyVariables>
-                    <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
-                    <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
-                    <maven.home>${maven.home}</maven.home>
-                  </systemPropertyVariables>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-      <properties>
-        <quarkus.package.type>native</quarkus.package.type>
-      </properties>
-    </profile>
-    <profile>
-      <id>production</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>com.vaadin</groupId>
-            <artifactId>vaadin-maven-plugin</artifactId>
-            <version>${vaadin.version}</version>
-            <executions>
-              <execution>
-                <goals>
-                  <goal>prepare-frontend</goal>
-                  <goal>build-frontend</goal>
-                </goals>
-                <phase>compile</phase>
-              </execution>
-            </executions>
-            <configuration>
-              <productionMode>true</productionMode>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 </project>
