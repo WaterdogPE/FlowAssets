@@ -33,6 +33,7 @@ function show_help() {
 
 # Downloads the asset using FlowAssets API
 function download_asset() {
+  echo "Downloading asset $ASSET_IDENTIFIER ..."
   asset_info=$(curl -s --connect-timeout 15 --header "flow-auth-token: $ACCESS_TOKEN" $SERVER_ADDRESS/api/asset/name/"$ASSET_IDENTIFIER")
   success=$(jq -r '.valid' <<< "$asset_info")
   download_url=$(jq -r '.downloadLink' <<< "$asset_info")
@@ -53,7 +54,8 @@ function download_asset() {
 
   if [[ -z "$FILE_PATH" ]]
   then
-    download_path="${deploy_path}${ASSET_IDENTIFIER}.dat"
+    file_extension=$(jq -r '.fileName' <<< "$asset_info")
+    download_path="${deploy_path}${file_extension}"
   else
     download_path="${deploy_path}${FILE_PATH}"
   fi
@@ -144,7 +146,7 @@ if [[ ! -z "$UPLOAD_FLAG" ]]; then
     show_help
     exit 1
   fi
-    if [[ -z "FILE_PATH" ]]; then
+    if [[ -z "$FILE_PATH" ]]; then
       echo "No upload file path specified!"
       show_help
       exit 1

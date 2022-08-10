@@ -96,6 +96,7 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
 
         this.singleFileUpload.setDropAllowed(false);
         this.singleFileUpload.addSucceededListener(this::onUpload);
+        this.singleFileUpload.setMaxFileSize(1024 * 1024 * 100);
 
         // Bind form
         this.binder.forField(this.assetRepository).bind(asset -> this.createRepositoryFromName(asset.getAssetRepository()),

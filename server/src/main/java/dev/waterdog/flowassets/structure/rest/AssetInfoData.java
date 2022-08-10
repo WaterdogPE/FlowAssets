@@ -27,6 +27,7 @@ public class AssetInfoData {
     private String assetRepository;
     private String downloadLink;
     private String deployPath;
+    private String fileName;
 
     public static AssetInfoData notFound(String uuid) {
         AssetInfoData response = new AssetInfoData();
@@ -54,6 +55,7 @@ public class AssetInfoData {
         if (asset.getDeployPath() != null) {
             response.setDeployPath(asset.getDeployPath().getPath());
         }
+        response.setFileName(asset.getAssetLocation().substring(asset.getAssetLocation().lastIndexOf('/') + 1));
         return response;
     }
 }
