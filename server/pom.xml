@@ -142,7 +142,7 @@
         <dependency>
             <groupId>org.vaadin.addons.parttio</groupId>
             <artifactId>breeze-theme</artifactId>
-            <version>1.0.2</version>
+            <version>1.0.3</version>
         </dependency>
         <!--Storage-->
         <dependency>
