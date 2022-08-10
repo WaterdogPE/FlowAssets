@@ -33,7 +33,7 @@ function show_help() {
 
 # Downloads the asset using FlowAssets API
 function download_asset() {
-  asset_info=$(curl -s --header "flow-auth-token: $ACCESS_TOKEN" $SERVER_ADDRESS/api/asset/name/"$ASSET_IDENTIFIER")
+  asset_info=$(curl -s --connect-timeout 15 --header "flow-auth-token: $ACCESS_TOKEN" $SERVER_ADDRESS/api/asset/name/"$ASSET_IDENTIFIER")
   success=$(jq -r '.valid' <<< "$asset_info")
   download_url=$(jq -r '.downloadLink' <<< "$asset_info")
 
@@ -72,7 +72,7 @@ function download_asset() {
 
 # Upload the asset to FlowAsset service
 function upload_asset() {
-  upload_response=$(curl -s -F asset_name="$ASSET_IDENTIFIER" -F repository="$REPOSITORY_NAME" -F attachment="@$FILE_PATH" --header "flow-auth-token: $ACCESS_TOKEN" "$SERVER_ADDRESS/api/asset/upload")
+  upload_response=$(curl -s --connect-timeout 15 -F asset_name="$ASSET_IDENTIFIER" -F repository="$REPOSITORY_NAME" -F attachment="@$FILE_PATH" --header "flow-auth-token: $ACCESS_TOKEN" "$SERVER_ADDRESS/api/asset/upload")
   success=$(jq -r '.success' <<< "$upload_response")
   asset_uuid=$(jq -r '.assetUuid' <<< "$upload_response")
   if [[ -z "$success" || "true" != "$success" || -z "$asset_uuid" ]]; then
