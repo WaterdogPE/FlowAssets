@@ -27,6 +27,7 @@ function show_help() {
         echo "  * --asset | Name of the asset"
         echo "  * --download | Flag to download asset"
         echo "  * --upload | Flag to upload asset"
+        echo "  * --update | Flag to update asset file"
         echo "  * --file | Path of the file to download to or upload from"
         echo "  * --repository | Asset repository name for uploading"
 }
@@ -87,8 +88,8 @@ function upload_asset() {
 
 function update_asset() {
   update_response=$(curl --connect-timeout 15 -F asset_name="$ASSET_IDENTIFIER" -F attachment="@$FILE_PATH" --header "flow-auth-token: $ACCESS_TOKEN" "$SERVER_ADDRESS/api/asset/update")
-  success=$(jq -r '.success' <<< "$update_response")
-  if [[ -z "$success" || "true" != "$success" ]]; then
+  success=$(jq -r '.status' <<< "$update_response")
+  if [[ -z "$success" || "ok" != "$success" ]]; then
         echo "Failed to update asset $ASSET_IDENTIFIER"
         exit 1
   fi
