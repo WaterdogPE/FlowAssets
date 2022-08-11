@@ -44,13 +44,12 @@ public class S3ServersView extends VerticalLayout {
         this.configureGrid();
 
         this.form = new S3ServersForm(this, repository);
-        this.form.setWidth("25em");
+        this.form.setWidth("35em");
         this.form.setVisible(false);
 
-        FlexLayout content = new FlexLayout(this.grid, this.form);
+        HorizontalLayout content = new HorizontalLayout(this.grid, this.form);
         content.setFlexGrow(2, this.grid);
         content.setFlexGrow(1, this.form);
-        content.setFlexShrink(0, this.form);
         content.addClassNames("content", "gap-m");
         content.setSizeFull();
         this.add(this.getToolbar(), content);

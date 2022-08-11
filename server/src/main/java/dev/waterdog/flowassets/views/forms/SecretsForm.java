@@ -48,7 +48,7 @@ public class SecretsForm extends AbstractEditForm<SecretToken> {
     private SecretToken asset = new SecretToken();
 
     TextField tokenName = new TextField("Name");
-    TextField description = new TextField("Bucket Name");
+    TextField description = new TextField("Description");
     Binder<SecretToken> binder = new BeanValidationBinder<>(SecretToken.class);
 
     public SecretsForm(SecretsView parent, SecretTokensRepository repository) {
