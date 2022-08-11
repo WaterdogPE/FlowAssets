@@ -85,6 +85,24 @@ function upload_asset() {
   echo "Uploaded asset $ASSET_IDENTIFIER successfully! Asset UUID is '$asset_uuid'"
 }
 
+function update_asset() {
+  update_response=$(curl --connect-timeout 15 -F asset_name="$ASSET_IDENTIFIER" -F attachment="@$FILE_PATH" --header "flow-auth-token: $ACCESS_TOKEN" "$SERVER_ADDRESS/api/asset/update")
+  success=$(jq -r '.success' <<< "$update_response")
+  if [[ -z "$success" || "true" != "$success" ]]; then
+        echo "Failed to update asset $ASSET_IDENTIFIER"
+        exit 1
+  fi
+  echo "Updated asset $ASSET_IDENTIFIER successfully!"
+}
+
+function check_flag() {
+  if [[ ! -z "$HAS_FLAG" ]]; then
+    echo "Can not combine download/upload/update flags!"
+    exit 1
+  fi
+  HAS_FLAG=true
+}
+
 # Parse arguments
 for i in "$@"; do
   case $i in
@@ -109,11 +127,18 @@ for i in "$@"; do
       shift
       ;;
     --download)
+      check_flag
       DOWNLOAD_FLAG=true
       shift
       ;;
     --upload)
+      check_flag
       UPLOAD_FLAG=true
+      shift
+      ;;
+    --update)
+      check_flag
+      UPDATE_FLAG=true
       shift
       ;;
     -*|--*)
@@ -131,11 +156,6 @@ if [[ -z "$SERVER_ADDRESS" || -z "$ACCESS_TOKEN" || -z "$ASSET_IDENTIFIER" ]]; t
   exit 1
 fi
 
-if [[ ! -z "$DOWNLOAD_FLAG" && ! -z "$UPLOAD_FLAG" ]]; then
-  echo "Can not perform upload and download at the same time!"
-  exit 1
-fi
-
 if [[ ! -z "$DOWNLOAD_FLAG" ]]; then
   download_asset
 fi
@@ -146,10 +166,19 @@ if [[ ! -z "$UPLOAD_FLAG" ]]; then
     show_help
     exit 1
   fi
-    if [[ -z "$FILE_PATH" ]]; then
-      echo "No upload file path specified!"
-      show_help
-      exit 1
-    fi
+  if [[ -z "$FILE_PATH" ]]; then
+    echo "No upload file path specified!"
+    show_help
+    exit 1
+  fi
   upload_asset
+fi
+
+if [[ ! -z "$UPDATE_FLAG" ]]; then
+  if [[ -z "$FILE_PATH" ]]; then
+    echo "No upload file path specified!"
+    show_help
+    exit 1
+  fi
+  update_asset
 fi

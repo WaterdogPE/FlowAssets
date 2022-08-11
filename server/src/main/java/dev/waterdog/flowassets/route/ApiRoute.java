@@ -20,6 +20,7 @@ import dev.waterdog.flowassets.repositories.storage.StorageRepositoryImpl;
 import dev.waterdog.flowassets.repositories.storage.StoragesRepository;
 import dev.waterdog.flowassets.structure.FileSnapshot;
 import dev.waterdog.flowassets.structure.FlowAsset;
+import dev.waterdog.flowassets.structure.rest.UpdateFormData;
 import dev.waterdog.flowassets.structure.rest.UploadFormData;
 import dev.waterdog.flowassets.structure.rest.AssetInfoData;
 import dev.waterdog.flowassets.structure.rest.UploadResponseData;
@@ -29,6 +30,7 @@ import io.quarkus.vertx.web.RouteBase;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
 import io.smallrye.mutiny.tuples.Tuple2;
+import io.smallrye.mutiny.tuples.Tuple3;
 import io.smallrye.mutiny.unchecked.Unchecked;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.web.RoutingContext;
@@ -164,6 +166,27 @@ public class ApiRoute {
                          Uni.createFrom().completionStage(FlowAsset.deleteAsset(tuple.getItem1(), this.assetsRepository, tuple.getItem2()))
                                  .map(v -> Response.ok(Helper.success(uuid, tuple.getItem1().getAssetName())).build()))
                  .onItem().ifNull().continueWith(() -> Response.ok(Helper.error("not found")).build())
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+
+    }
+
+    @POST
+    @Path("asset/update")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Uni<Response> assetUpdate(@MultipartForm UpdateFormData form) {
+        return Uni.createFrom().item(() -> this.assetsRepository.getByName(form.getAssetName()))
+                .onItem().ifNotNull().transform(asset -> Tuple2.of(asset, this.storages.getStorageRepository(asset.getAssetRepository())))
+                .onItem().ifNotNull().transformToUni(tuple -> {
+                    Uni<Void> uni = Uni.createFrom().completionStage(tuple.getItem2().deleteSnapshots(tuple.getItem1().toString()));
+                    Uni<FileSnapshot> item = Uni.createFrom()
+                            .item(Unchecked.supplier(() -> FileSnapshot.createSkeleton(form.getAttachment().fileName(), Files.newInputStream(form.getAttachment().filePath()))));
+
+                    return uni.flatMap(i -> item)
+                            .flatMap(snapshot -> Uni.createFrom().completionStage(FlowAsset.uploadAssetFile(tuple.getItem1(), snapshot, this.assetsRepository, tuple.getItem2())))
+                            .map(v -> Response.ok(Helper.success(form.getAssetName())).build());
+                })
+                .onFailure().invoke(err -> Response.status(Status.INTERNAL_SERVER_ERROR).build())
                 .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
 
     }

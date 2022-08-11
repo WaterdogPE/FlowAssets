@@ -62,10 +62,17 @@ public class FlowAsset extends PanacheEntityBase {
             fileSnapshot.setUuid(asset.getUuid().toString());
             return Pair.of(asset, fileSnapshot);
         }).thenCompose(pair -> storageRepository.saveFileSnapshot(pair.getRight()).thenApply(i -> pair))
-                .thenApply(pair -> {
-                    pair.getLeft().setAssetLocation(pair.getLeft().getUuid() + "/" + fileSnapshot.getFileName());
-                    assetsRepository.save(pair.getLeft());
-                    return pair.getLeft();
+                .thenCompose(pair -> uploadAssetFile(pair.getLeft(), pair.getRight(), assetsRepository, storageRepository));
+    }
+
+    public static CompletableFuture<FlowAsset> uploadAssetFile(FlowAsset asset, FileSnapshot fileSnapshot,
+                                                           AssetsRepository assetsRepository, StorageRepositoryImpl storageRepository) {
+        fileSnapshot.setUuid(asset.getUuid().toString());
+        return CompletableFuture.runAsync(() -> storageRepository.saveFileSnapshot(fileSnapshot))
+                .thenApply(i -> {
+                    asset.setAssetLocation(asset.getUuid() + "/" + fileSnapshot.getFileName());
+                    assetsRepository.save(asset);
+                    return asset;
                 });
     }
 
