@@ -65,9 +65,9 @@ function download_asset() {
 
   if [[ "$download_url" == /api/file/* ]]
   then
-    curl -o "$download_path" --header "flow-auth-token: $ACCESS_TOKEN" "${SERVER_ADDRESS}${download_url}"
+    curl -s -S -f -o "$download_path" --header "flow-auth-token: $ACCESS_TOKEN" "${SERVER_ADDRESS}${download_url}"
   else
-    curl -o "$download_path" "$download_url"
+    curl -s -S -f -o "$download_path" "$download_url"
   fi
 
   echo "Downloaded asset '$ASSET_IDENTIFIER' successfully!"
