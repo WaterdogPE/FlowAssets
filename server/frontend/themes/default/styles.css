@@ -1,4 +1,5 @@
 @import url('./views/list-view.css');
+@import url('lumo-css-framework/all-classes.css');
 
 a[highlight] {
     font-weight: bold;

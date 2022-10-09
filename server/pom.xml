@@ -19,9 +19,9 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-        <quarkus.platform.version>2.9.2.Final</quarkus.platform.version>
-        <surefire-plugin.version>3.0.0-M5</surefire-plugin.version>
-        <vaadin.version>23.1.2</vaadin.version>
+        <quarkus.platform.version>2.13.1.Final</quarkus.platform.version>
+        <surefire-plugin.version>3.0.0-M7</surefire-plugin.version>
+        <vaadin.version>23.2.3</vaadin.version>
         <lombok.version>1.18.24</lombok.version>
         <aws.java.sdk.version>2.16.1</aws.java.sdk.version>
     </properties>

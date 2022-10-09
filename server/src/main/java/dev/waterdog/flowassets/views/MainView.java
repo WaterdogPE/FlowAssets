@@ -18,6 +18,7 @@ package dev.waterdog.flowassets.views;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
+import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
@@ -47,12 +48,12 @@ public class MainView extends AppLayout {
 
     private void createHeader() {
         H2 logo = new H2("FlowAssets");
-        logo.addClassNames("text-1", "m-m");
+        logo.addClassNames("text-2", "m-m");
 
         Span greetingSpan = new Span("Hello");
         Span helloSpan = new Span(this.createIcon(VaadinIcon.HAND), greetingSpan);
         helloSpan.getElement().getThemeList().add("badge success");
-        helloSpan.getStyle().set("padding", "var(--lumo-space-s");
+        helloSpan.getStyle().set("margin-right", "var(--lumo-space-m");
 
         greetingSpan.addAttachListener(event -> {
             String userName = Helper.getUserName(this.idToken);
