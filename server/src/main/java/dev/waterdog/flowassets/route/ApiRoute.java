@@ -15,22 +15,19 @@
 
 package dev.waterdog.flowassets.route;
 
+import dev.waterdog.flowassets.repositories.AssetGroupRepository;
 import dev.waterdog.flowassets.repositories.AssetsRepository;
 import dev.waterdog.flowassets.repositories.storage.StorageRepositoryImpl;
 import dev.waterdog.flowassets.repositories.storage.StoragesRepository;
 import dev.waterdog.flowassets.structure.FileSnapshot;
 import dev.waterdog.flowassets.structure.FlowAsset;
-import dev.waterdog.flowassets.structure.rest.UpdateFormData;
-import dev.waterdog.flowassets.structure.rest.UploadFormData;
-import dev.waterdog.flowassets.structure.rest.AssetInfoData;
-import dev.waterdog.flowassets.structure.rest.UploadResponseData;
+import dev.waterdog.flowassets.structure.rest.*;
 import dev.waterdog.flowassets.utils.Helper;
 import io.quarkus.vertx.web.Route;
 import io.quarkus.vertx.web.RouteBase;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
 import io.smallrye.mutiny.tuples.Tuple2;
-import io.smallrye.mutiny.tuples.Tuple3;
 import io.smallrye.mutiny.unchecked.Unchecked;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.web.RoutingContext;
@@ -45,6 +42,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 
 @JBossLog
 @Path("api/")
@@ -59,6 +58,9 @@ public class ApiRoute {
 
     @Inject
     AssetsRepository assetsRepository;
+
+    @Inject
+    AssetGroupRepository groupRepository;
 
     @Route(path = "*", order = 0, type = Route.HandlerType.BLOCKING)
     public void secureRoute(RoutingContext ctx) {
@@ -132,6 +134,28 @@ public class ApiRoute {
                     }
                     return response;
                 });
+    }
+
+    @GET
+    @Path("group/{name}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Uni<GroupInfoData> groupInfoName(@RestPath String name) {
+        return Uni.createFrom().item(() -> this.groupRepository.getInitialized(name))
+                .onItem().ifNotNull().transformToUni(group -> {
+                    List<Uni<AssetInfoData>> unis = new ArrayList<>();
+                    for (FlowAsset asset : group.getAssets()) {
+                        unis.add(this.serverAssetInfo(asset));
+                    }
+                    return Uni.combine().all().unis(unis).combinedWith(AssetInfoData.class, l -> l);
+                }).onItem().ifNotNull().transform(assets -> {
+                    GroupInfoData data = new GroupInfoData();
+                    data.setFound(true);
+                    data.setGroupName(name);
+                    data.setAssets(assets);
+                    return data;
+                })
+                .onItem().ifNull().continueWith(GroupInfoData.notFound(name))
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @POST

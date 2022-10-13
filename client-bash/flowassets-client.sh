@@ -25,7 +25,8 @@ function show_help() {
         echo "  * --server | FlowAssets server address"
         echo "  * --token | Access token used for requests"
         echo "  * --asset | Name of the asset"
-        echo "  * --download | Flag to download asset"
+        echo "  * --group | Name of the asset group"
+        echo "  * --download | Flag to download asset or group of assets"
         echo "  * --upload | Flag to upload asset"
         echo "  * --update | Flag to update asset file"
         echo "  * --file | Path of the file to download to or upload from"
@@ -35,16 +36,39 @@ function show_help() {
 # Downloads the asset using FlowAssets API
 function download_asset() {
   echo "Downloading asset $ASSET_IDENTIFIER ..."
-  asset_info=$(curl -s --connect-timeout 15 --header "flow-auth-token: $ACCESS_TOKEN" $SERVER_ADDRESS/api/asset/name/"$ASSET_IDENTIFIER")
-  success=$(jq -r '.valid' <<< "$asset_info")
-  download_url=$(jq -r '.downloadLink' <<< "$asset_info")
+  asset_info=$(curl -s --connect-timeout 15 --header "flow-auth-token: $ACCESS_TOKEN" "$SERVER_ADDRESS"/api/asset/name/"$ASSET_IDENTIFIER")
+  save_asset "$asset_info"
+}
+
+# Downloads all assets of the specified group
+function download_group() {
+  echo "Downloading assets from group $GROUP_IDENTIFIER ..."
+  group_info=$(curl -s --connect-timeout 15 --header "flow-auth-token: $ACCESS_TOKEN" "$SERVER_ADDRESS"/api/group/"$GROUP_IDENTIFIER")
+  success=$(jq -r '.found' <<< "$group_info")
+  assets=$(jq -r '.assets | keys | .[]' <<< "$group_info")
+
+  if [[ -z "$success" || "true" != "$success" || -z "$assets" ]]; then
+    echo "Unable to fetch group info for $GROUP_IDENTIFIER"
+    exit 1
+  fi
+
+  for key in $assets; do
+    asset_info=$(jq -r ".assets[$key]" <<< "$group_info")
+    save_asset "$asset_info"
+  done
+}
+
+function save_asset() {
+  success=$(jq -r '.valid' <<< "$1")
+  download_url=$(jq -r '.downloadLink' <<< "$1")
+  asset_name=$(jq -r '.assetName' <<< "$1")
 
   if [[ -z "$success" || "true" != "$success" || -z "$download_url" ]]; then
     echo "Failed to download asset $ASSET_IDENTIFIER"
     exit 1
   fi
 
-  deploy_path=$(jq -r '.deployPath' <<< "$asset_info")
+  deploy_path=$(jq -r '.deployPath' <<< "$1")
   if [[ -z "$deploy_path" || "null" == "$deploy_path" ]]
   then
     deploy_path="./"
@@ -55,13 +79,13 @@ function download_asset() {
 
   if [[ -z "$FILE_PATH" ]]
   then
-    file_extension=$(jq -r '.fileName' <<< "$asset_info")
+    file_extension=$(jq -r '.fileName' <<< "$1")
     download_path="${deploy_path}${file_extension}"
   else
     download_path="${deploy_path}${FILE_PATH}"
   fi
 
-  echo "Found an asset with UUID '$(jq -r '.uuid' <<< "$asset_info")' downloading to $download_path ..."
+  echo "Found an asset with UUID '$(jq -r '.uuid' <<< "$1")' downloading to $download_path ..."
 
   if [[ "$download_url" == /api/file/* ]]
   then
@@ -70,7 +94,7 @@ function download_asset() {
     curl -s -S -f -o "$download_path" "$download_url"
   fi
 
-  echo "Downloaded asset '$ASSET_IDENTIFIER' successfully!"
+  echo "Downloaded asset '$asset_name' successfully!"
 }
 
 # Upload the asset to FlowAsset service
@@ -119,6 +143,10 @@ for i in "$@"; do
       ASSET_IDENTIFIER="${i#*=}"
       shift
       ;;
+    --group*)
+      GROUP_IDENTIFIER="${i#*=}"
+      shift
+      ;;
     --file*)
       FILE_PATH="${i#*=}"
       shift
@@ -152,13 +180,18 @@ for i in "$@"; do
   esac
 done
 
-if [[ -z "$SERVER_ADDRESS" || -z "$ACCESS_TOKEN" || -z "$ASSET_IDENTIFIER" ]]; then
+if [[ -z "$SERVER_ADDRESS" || -z "$ACCESS_TOKEN" || (-z "$ASSET_IDENTIFIER" && -z "$GROUP_IDENTIFIER") ]]; then
   show_help
   exit 1
 fi
 
 if [[ ! -z "$DOWNLOAD_FLAG" ]]; then
-  download_asset
+  if [[ ! -z "$GROUP_IDENTIFIER" ]]
+  then
+    download_group
+  else
+    download_asset
+  fi
 fi
 
 if [[ ! -z "$UPLOAD_FLAG" ]]; then

@@ -78,10 +78,11 @@ public class MainView extends AppLayout {
         Tab home = this.createPageTab("Home", HomeView.class, VaadinIcon.HOME, tabs::setSelectedTab);
         Tab assets = this.createPageTab("Assets", AssetsView.class, VaadinIcon.DOWNLOAD, tabs::setSelectedTab);
         Tab paths = this.createPageTab("Deploy Paths", DeployPathsView.class, VaadinIcon.PLAY, tabs::setSelectedTab);
+        Tab groups = this.createPageTab("Groups", AssetGroupsView.class, VaadinIcon.USERS, tabs::setSelectedTab);
         Tab repositories = this.createPageTab("Repositories", S3ServersView.class, VaadinIcon.STORAGE, tabs::setSelectedTab);
         Tab secrets = this.createPageTab("Secrets", SecretsView.class, VaadinIcon.BOOK, tabs::setSelectedTab);
 
-        tabs.add(home, assets, paths, repositories, secrets);
+        tabs.add(home, assets, groups, paths, repositories, secrets);
         tabs.setOrientation(Tabs.Orientation.VERTICAL);
         this.addToDrawer(tabs);
     }

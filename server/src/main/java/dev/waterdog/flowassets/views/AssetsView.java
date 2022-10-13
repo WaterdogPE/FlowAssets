@@ -19,28 +19,36 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.grid.SortOrderProvider;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
-import com.vaadin.flow.data.provider.DataProvider;
-import com.vaadin.flow.data.provider.ListDataProvider;
-import com.vaadin.flow.data.provider.Query;
+import com.vaadin.flow.data.provider.*;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import dev.waterdog.flowassets.repositories.AssetGroupRepository;
 import dev.waterdog.flowassets.repositories.AssetsRepository;
 import dev.waterdog.flowassets.repositories.DeployPathsRepository;
 import dev.waterdog.flowassets.repositories.storage.StorageRepositoryImpl;
 import dev.waterdog.flowassets.repositories.storage.StoragesRepository;
+import dev.waterdog.flowassets.structure.AssetGroup;
 import dev.waterdog.flowassets.structure.FlowAsset;
 import dev.waterdog.flowassets.views.forms.AssetsForm;
+import org.hibernate.Hibernate;
 
 import javax.inject.Inject;
+import java.awt.*;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Stream;
 
 @PageTitle("FlowAssets | Assets")
 @Route(value = "assets", layout = MainView.class)
@@ -54,14 +62,14 @@ public class AssetsView extends VerticalLayout {
 
     @Inject
     public AssetsView(AssetsRepository assetsRepository, StoragesRepository storagesRepository,
-                      DeployPathsRepository pathsRepository) {
+                      DeployPathsRepository pathsRepository, AssetGroupRepository assetsGroupRepository) {
         this.assetsRepository = assetsRepository;
         this.storagesRepository = storagesRepository;
         this.addClassName("list-view");
         this.setSizeFull();
         this.configureGrid();
 
-        this.form = new AssetsForm(this, assetsRepository, storagesRepository, pathsRepository);
+        this.form = new AssetsForm(this, assetsRepository, storagesRepository, pathsRepository, assetsGroupRepository);
         this.form.setWidth("35em");
         this.form.setVisible(false);
 
@@ -77,14 +85,37 @@ public class AssetsView extends VerticalLayout {
         this.grid.addClassNames("contact-grid");
         this.grid.setSizeFull();
         this.grid.removeAllColumns();
+        this.grid.addComponentColumn(asset -> {
+            if (asset.getGroups().isEmpty()) {
+                return new Span();
+            }
+
+            HorizontalLayout layout = new HorizontalLayout();
+            layout.setSpacing(false);
+            layout.getThemeList().add("spacing-xs");
+
+            if (asset.getGroups().size() > 2) {
+                Span badge = new Span(new Span("2+"));
+                badge.getElement().getThemeList().add("badge pill");
+                layout.add(badge);
+                return layout;
+            }
+
+            for (AssetGroup assetGroup : asset.getGroups()) {
+                Span badge = new Span(new Span(assetGroup.getName()));
+                badge.getElement().getThemeList().add("badge pill");
+                layout.add(badge);
+            }
+            return layout;
+        }).setHeader("Group").setFlexGrow(0);
         this.grid.addColumn(FlowAsset::getAssetName)
                 .setHeader("Name").setSortable(true);
         this.grid.addColumn(FlowAsset::getUuid)
                 .setHeader("UUID");
         this.grid.addColumn(asset -> asset.getDeployPath() == null ? "None" : asset.getDeployPath().getName())
-                .setHeader("Deploy Path").setSortable(true);
+                .setHeader("Deploy Path");
         this.grid.addColumn(FlowAsset::getAssetRepository)
-                .setHeader("Repository").setSortable(true);
+                .setHeader("Repository");
 
         this.grid.addComponentColumn(asset -> {
             Button button = new Button(new Icon(VaadinIcon.DOWNLOAD));

@@ -19,20 +19,21 @@ import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.upload.*;
 import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
 import com.vaadin.flow.data.binder.BeanValidationBinder;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.binder.ValidationException;
-import com.vaadin.flow.data.provider.CallbackDataProvider;
-import com.vaadin.flow.data.provider.DataProvider;
 import dev.waterdog.flowassets.repositories.AbstractRepository;
+import dev.waterdog.flowassets.repositories.AssetGroupRepository;
 import dev.waterdog.flowassets.repositories.AssetsRepository;
 import dev.waterdog.flowassets.repositories.DeployPathsRepository;
 import dev.waterdog.flowassets.repositories.storage.StorageRepositoryImpl;
 import dev.waterdog.flowassets.repositories.storage.StoragesRepository;
 import dev.waterdog.flowassets.structure.*;
+import dev.waterdog.flowassets.utils.DataProviderBuilder;
 import dev.waterdog.flowassets.utils.Helper;
 import dev.waterdog.flowassets.views.AssetsView;
 import lombok.Data;
@@ -40,18 +41,17 @@ import lombok.extern.jbosslog.JBossLog;
 
 import javax.transaction.Transactional;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 @JBossLog
 public class AssetsForm extends AbstractEditForm<FlowAsset> {
-    private static final PathData NO_PATH_DATA = new PathData("None", null);
+    private static final DeployPathWrapper NO_PATH_DATA = new DeployPathWrapper("None", null);
 
     private final AssetsRepository assetsRepository;
     private final StoragesRepository storages;
     private final DeployPathsRepository pathsRepository;
+    private final AssetGroupRepository assetsGroupRepository;
 
     private final AssetsView parent;
     private FlowAsset asset = new FlowAsset();
@@ -62,8 +62,9 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
 
     // Editable fields
     TextField assetName = new TextField("Name");
-    ComboBox<RepositoryData> assetRepository = new ComboBox<>("Repository");
-    ComboBox<PathData> deployPath = new ComboBox<>("Deploy Path");
+    ComboBox<RepositoryWrapper> assetRepository = new ComboBox<>("Repository");
+    ComboBox<DeployPathWrapper> deployPath = new ComboBox<>("Deploy Path");
+    MultiSelectComboBox<AssetGroup> assetGroup = new MultiSelectComboBox<>("Groups");
 
     MemoryBuffer memoryBuffer = new MemoryBuffer();
     Upload singleFileUpload = new Upload(memoryBuffer);
@@ -74,24 +75,36 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
     Binder<FlowAsset> binder = new BeanValidationBinder<>(FlowAsset.class);
 
     public AssetsForm(AssetsView parent, AssetsRepository assetsRepository,
-                      StoragesRepository storages, DeployPathsRepository pathsRepository) {
+                      StoragesRepository storages, DeployPathsRepository pathsRepository, AssetGroupRepository assetsGroupRepository) {
         super();
         this.parent = parent;
         this.assetsRepository = assetsRepository;
         this.storages = storages;
         this.pathsRepository = pathsRepository;
+        this.assetsGroupRepository = assetsGroupRepository;
 
         // Init components
         this.assetLocation.setReadOnly(true);
 
-        this.deployPath.setItemLabelGenerator(PathData::getPathName);
-        this.deployPath.setItems(AbstractRepository.createDataprovider(this.pathsRepository, stream -> stream.map(path -> new PathData(path.getName(), path))));
+        this.deployPath.setPlaceholder("Select deploy path");
+        this.deployPath.setItemLabelGenerator(DeployPathWrapper::getPathName);
 
-        this.assetRepository.setItemLabelGenerator(RepositoryData::getRepositoryName);
-        this.assetRepository.setItems(AbstractRepository.createDataprovider(this.storages.getS3ConfigRepository(), stream -> {
-            Stream<RepositoryData> repositoryStream = stream
-                    .map(serverData -> new RepositoryData(RepositoryType.REMOTE_S3, serverData.getServerName()));
-            return Stream.concat(repositoryStream, Stream.of(RepositoryData.LOCAL));
+        DataProviderBuilder<DeployPath, DeployPathWrapper> builder = DataProviderBuilder.create();
+        builder.repository(this.pathsRepository);
+        builder.mapper(stream -> stream.map(path -> new DeployPathWrapper(path.getName(), path)));
+        builder.extraValues(NO_PATH_DATA);
+        this.deployPath.setItems(builder.build());
+
+        this.assetGroup.setPlaceholder("Select group");
+        this.assetGroup.setItemLabelGenerator(AssetGroup::getName);
+        this.assetGroup.setItems(AbstractRepository.createDataProviderMapped(this.assetsGroupRepository, AssetGroup::getName));
+
+        this.assetRepository.setPlaceholder("Select repository");
+        this.assetRepository.setItemLabelGenerator(RepositoryWrapper::getRepositoryName);
+        this.assetRepository.setItems(AbstractRepository.createDataProvider(this.storages.getS3ConfigRepository(), stream -> {
+            Stream<RepositoryWrapper> repositoryStream = stream
+                    .map(serverData -> new RepositoryWrapper(RepositoryType.REMOTE_S3, serverData.getServerName()));
+            return Stream.concat(repositoryStream, Stream.of(RepositoryWrapper.LOCAL));
         }));
 
         this.singleFileUpload.setDropAllowed(false);
@@ -101,11 +114,15 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
         // Bind form
         this.binder.forField(this.assetRepository).bind(asset -> this.createRepositoryFromName(asset.getAssetRepository()),
                 (asset, repository) -> asset.setAssetRepository(repository.getRepositoryName()));
-        this.binder.forField(this.deployPath).bind(this::createPathDataFromAsset,
+
+        this.binder.forField(this.deployPath).bind(this::createDeployPathWrapper,
                 (asset, path) -> asset.setDeployPath(path.getDeployPath()));
+
+        this.binder.forField(this.assetGroup).bind(FlowAsset::getGroups, FlowAsset::setGroups);
+
         this.binder.bindInstanceFields(this);
         this.binder.addStatusChangeListener(e -> this.save.setEnabled(this.binder.isValid() && (this.editMode || this.uploaded)));
-        this.add(this.assetName, this.deployPath, this.assetLocation, this.singleFileUpload, this.assetRepository);
+        this.add(this.assetName, this.deployPath, this.assetGroup, this.assetLocation, this.singleFileUpload, this.assetRepository);
         this.addParentComponents();
     }
 
@@ -238,27 +255,27 @@ public class AssetsForm extends AbstractEditForm<FlowAsset> {
         this.binder.readBean(value);
     }
 
-    private RepositoryData createRepositoryFromName(String name) {
+    private RepositoryWrapper createRepositoryFromName(String name) {
         if (name == null || RepositoryType.getTypeFromName(name) == RepositoryType.LOCAL) {
-            return RepositoryData.LOCAL;
+            return RepositoryWrapper.LOCAL;
         }
 
         S3ServerData serverData;
         if ((serverData = this.storages.getS3ConfigRepository().getByName(name)) == null) {
             return null;
         }
-        return new RepositoryData(RepositoryType.REMOTE_S3, serverData.getServerName());
+        return new RepositoryWrapper(RepositoryType.REMOTE_S3, serverData.getServerName());
     }
 
     @Transactional
-    private PathData createPathDataFromAsset(FlowAsset asset) {
+    private DeployPathWrapper createDeployPathWrapper(FlowAsset asset) {
         DeployPath deployPath = asset.getDeployPath();
         return deployPath == null ? NO_PATH_DATA :
-                new PathData(deployPath.getName(), deployPath);
+                new DeployPathWrapper(deployPath.getName(), deployPath);
     }
 
     @Data
-    private static class PathData {
+    private static class DeployPathWrapper {
         private final String pathName;
         private final DeployPath deployPath;
     }

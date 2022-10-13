@@ -17,7 +17,8 @@ package dev.waterdog.flowassets.repositories;
 
 import com.vaadin.flow.data.provider.CallbackDataProvider;
 import com.vaadin.flow.data.provider.DataProvider;
-import dev.waterdog.flowassets.views.forms.AssetsForm;
+import com.vaadin.flow.function.ValueProvider;
+import dev.waterdog.flowassets.utils.DataProviderBuilder;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 
 import javax.transaction.Transactional;
@@ -36,7 +37,7 @@ public abstract class AbstractRepository<T> implements PanacheRepository<T> {
 
     @Transactional
     public long countByName(String name) {
-        return this.find(this.nameIdentifier() + " like ?1", "%" + name.trim() + "%").count();
+        return this.count(this.nameIdentifier() + " like ?1", "%" + name.trim() + "%");
     }
 
     @Transactional
@@ -83,12 +84,21 @@ public abstract class AbstractRepository<T> implements PanacheRepository<T> {
         }
     }
 
-    public static <T> DataProvider<T, String> createDataprovider(AbstractRepository<T> repository) {
-        return createDataprovider(repository, stream -> stream);
+    public static <T> DataProvider<T, String> createDataProvider(AbstractRepository<T> repository) {
+        return DataProviderBuilder.create(repository)
+                .build();
     }
 
-    public static <T, R> DataProvider<R, String> createDataprovider(AbstractRepository<T> repository, Function<Stream<T>, Stream<R>> mapper) {
-        return new CallbackDataProvider<>(query -> mapper.apply(repository.getAll(query.getPage(), query.getPageSize()).stream()),
-                query -> (int) repository.count());
+    public static <T> DataProvider<T, String> createDataProviderMapped(AbstractRepository<T> repository, ValueProvider<T, Object> identifierGetter) {
+        return DataProviderBuilder.create(repository)
+                .identifierGetter(identifierGetter)
+                .build();
+    }
+
+    public static <T, R> DataProvider<R, String> createDataProvider(AbstractRepository<T> repository, Function<Stream<T>, Stream<R>> mapper) {
+        DataProviderBuilder<T, R> builder = DataProviderBuilder.create();
+        builder.repository(repository);
+        builder.mapper(mapper);
+        return builder.build();
     }
 }

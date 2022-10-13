@@ -26,6 +26,7 @@ import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.*;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -56,8 +57,15 @@ public class FlowAsset extends PanacheEntityBase {
     @JoinColumn(name = "path_id", referencedColumnName = "id")
     private DeployPath deployPath;
 
+    @ToString.Exclude
+    @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @JoinTable(name = "groups_join",
+            joinColumns = @JoinColumn(name = "asset_id", referencedColumnName = "uuid"),
+            inverseJoinColumns = @JoinColumn(name = "group_id", referencedColumnName = "id"))
+    private Set<AssetGroup> groups;
+
     public static CompletableFuture<FlowAsset> uploadAsset(FlowAsset skeleton, FileSnapshot fileSnapshot,
-                                                      AssetsRepository assetsRepository, StorageRepositoryImpl storageRepository) {
+                                                           AssetsRepository assetsRepository, StorageRepositoryImpl storageRepository) {
         return CompletableFuture.supplyAsync(() -> assetsRepository.save(skeleton)).thenApply(asset -> {
             fileSnapshot.setUuid(asset.getUuid().toString());
             return Pair.of(asset, fileSnapshot);

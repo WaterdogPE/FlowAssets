@@ -13,15 +13,22 @@
  * limitations under the License.
  */
 
-package dev.waterdog.flowassets.structure;
+package dev.waterdog.flowassets.structure.rest;
 
 import lombok.Data;
 
+import java.util.List;
+
 @Data
-public class RepositoryData {
+public class GroupInfoData {
+    private boolean found;
+    private String groupName;
+    private List<AssetInfoData> assets;
 
-    public static final RepositoryData LOCAL = new RepositoryData(RepositoryType.LOCAL, RepositoryType.LOCAL.getSaveName());
-
-    private final RepositoryType type;
-    private final String repositoryName;
+    public static GroupInfoData notFound(String groupName) {
+        GroupInfoData response = new GroupInfoData();
+        response.setFound(false);
+        response.setGroupName(groupName);
+        return response;
+    }
 }
