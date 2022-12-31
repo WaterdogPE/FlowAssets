@@ -13,27 +13,13 @@
  * limitations under the License.
  */
 
-package dev.waterdog.flowassets.structure.rest;
+package dev.waterdog.flowassets.client.structure;
 
-import lombok.Getter;
-import lombok.ToString;
-import org.jboss.resteasy.reactive.PartType;
-import org.jboss.resteasy.reactive.RestForm;
-import org.jboss.resteasy.reactive.multipart.FileUpload;
+import lombok.Data;
 
-import javax.ws.rs.core.MediaType;
-
-@Getter
-@ToString
-public class UploadFormData {
-
-    @RestForm("asset_name")
-    private String assetName;
-
-    @RestForm("repository")
-    private String repositoryName;
-
-    @RestForm("attachment")
-    @PartType(MediaType.APPLICATION_OCTET_STREAM)
-    private FileUpload attachment;
+@Data
+public class UpdateResponseData {
+    private String status;
+    private String message;
+    private String result;
 }

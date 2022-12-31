@@ -8,10 +8,12 @@
   <version>1.0.0-SNAPSHOT</version>
   <modules>
     <module>server</module>
+    <module>client-java</module>
   </modules>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <lombok.version>1.18.24</lombok.version>
   </properties>
 
   <repositories>
@@ -20,6 +22,7 @@
       <url>https://repo.waterdog.dev/artifactory/main</url>
     </repository>
   </repositories>
+
   <distributionManagement>
     <repository>
       <id>central</id>
@@ -32,6 +35,4 @@
       <url>http://repo.waterdog.dev/artifactory/snapshots</url>
     </snapshotRepository>
   </distributionManagement>
-
-
 </project>
