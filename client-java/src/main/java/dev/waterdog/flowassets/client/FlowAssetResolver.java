@@ -159,7 +159,7 @@ public class FlowAssetResolver {
     }
 
 
-    public CompletableFuture<UploadResponseData> uploadAsset(String assetName, String repositoryName, Path filePath) {
+    public CompletableFuture<UploadResponseData> uploadAsset(String assetName, String repositoryName, Path filePath, String uploadFileName) {
         return CompletableFuture.supplyAsync(unsafe(() -> {
             if (!Files.isRegularFile(filePath)) {
                 throw new IllegalArgumentException("File " + filePath + " was not found");
@@ -170,7 +170,7 @@ public class FlowAssetResolver {
                         .setContentType(ContentType.MULTIPART_FORM_DATA)
                         .addTextBody("asset_name", assetName)
                         .addTextBody("repository", repositoryName)
-                        .addBinaryBody("attachment", stream, ContentType.APPLICATION_OCTET_STREAM, filePath.getFileName().toString())
+                        .addBinaryBody("attachment", stream, ContentType.APPLICATION_OCTET_STREAM, uploadFileName)
                         .build();
 
                 HttpPost post = new HttpPost(this.serverAddress + "/api/asset/upload");

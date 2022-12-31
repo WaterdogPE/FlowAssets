@@ -32,11 +32,15 @@ public interface StorageRepositoryImpl {
         return switch (storage.getType()) {
             case LOCAL -> "/api/file/" + asset.getAssetLocation();
             case REMOTE_S3 -> {
-                String[] namespace = asset.getAssetLocation().split("/");
-                String fileName = namespace[namespace.length - 1];
+                String fileName = getAssetFileName(asset);
                 yield ((S3StorageRepository) storage).createDownloadUrl(asset.getUuid().toString(), fileName).toString();
             }
         };
 
+    }
+
+    static String getAssetFileName(FlowAsset asset) {
+        String[] namespace = asset.getAssetLocation().split("/");
+        return namespace[namespace.length - 1];
     }
 }

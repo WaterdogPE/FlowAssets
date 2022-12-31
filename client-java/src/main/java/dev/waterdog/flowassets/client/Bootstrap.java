@@ -145,7 +145,7 @@ public class Bootstrap {
         String assetName = options.valueOf(ASSET_OPTION);
         String repositoryName = options.valueOf(REPOSITORY_OPTION);
         Path path = Paths.get(options.valueOf(FILE_OPTION));
-        UploadResponseData responseData = resolver.uploadAsset(assetName, repositoryName, path).join();
+        UploadResponseData responseData = resolver.uploadAsset(assetName, repositoryName, path, path.getFileName().toString()).join();
         if (responseData.isSuccess()) {
             log.info("Uploaded asset {} with uuid {} successfully!", assetName, responseData.getAssetUuid());
         } else {

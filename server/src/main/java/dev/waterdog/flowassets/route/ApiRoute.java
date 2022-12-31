@@ -45,6 +45,8 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
+import static dev.waterdog.flowassets.repositories.storage.StorageRepositoryImpl.getAssetFileName;
+
 @JBossLog
 @Path("api/")
 @RouteBase(path = "api")
@@ -184,7 +186,11 @@ public class ApiRoute {
 
                     Uni<Void> deleteUni;
                     if (form.getRepositoryName().equals(asset.getAssetRepository())) {
-                        deleteUni = Uni.createFrom().completionStage(storage.deleteSnapshots(asset.getUuid().toString()));
+                        if (form.getAttachment().fileName().equals(getAssetFileName(asset))) {
+                            deleteUni = Uni.createFrom().voidItem(); // no need to delete if file is being replaced
+                        } else {
+                            deleteUni = Uni.createFrom().completionStage(storage.deleteSnapshots(asset.getUuid().toString()));
+                        }
                     } else {
                         deleteUni = Uni.createFrom().item(() -> this.storages.getStorageRepository(asset.getAssetRepository()))
                                 .onItem().ifNotNull().transformToUni(s -> Uni.createFrom().completionStage(s.deleteSnapshots(asset.getUuid().toString())))
