@@ -163,20 +163,42 @@ public class ApiRoute {
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.APPLICATION_JSON)
     public Uni<Response> assetCreate(@MultipartForm UploadFormData form) {
-        return Uni.createFrom().item(() -> this.storages.getStorageRepository(form.getRepositoryName())).flatMap(storage -> {
-            if (storage == null) {
-                return Uni.createFrom().item(Response.ok(UploadResponseData.error("invalid storage")).build());
-            }
+        return Uni.createFrom().item(() -> this.storages.getStorageRepository(form.getRepositoryName()))
+                .onItem().ifNotNull().transform(storage -> Tuple2.of(storage, this.assetsRepository.getByName(form.getAssetName())))
+                .onItem().ifNotNull().transformToUni(tuple -> {
+                    StorageRepositoryImpl storage = tuple.getItem1();
+                    FlowAsset asset = tuple.getItem2();
 
-            return Uni.createFrom().item(Unchecked.supplier(() -> FileSnapshot.createSkeleton(form.getAttachment().fileName(), Files.newInputStream(form.getAttachment().filePath()))))
-                    .flatMap(snapshot -> {
-                        FlowAsset skeleton = new FlowAsset();
-                        skeleton.setAssetName(form.getAssetName());
-                        skeleton.setAssetRepository(form.getRepositoryName());
-                        return Uni.createFrom().completionStage(FlowAsset.uploadAsset(skeleton, snapshot, this.assetsRepository, storage))
-                                .map(asset -> Response.ok(UploadResponseData.ok(asset.getAssetName(), asset.getUuid().toString())).build());
-                    });
-        }).onFailure().invoke(err -> Response.status(Status.INTERNAL_SERVER_ERROR).build())
+                    Uni<FileSnapshot> item = Uni.createFrom()
+                            .item(Unchecked.supplier(() -> FileSnapshot.createSkeleton(form.getAttachment().fileName(), Files.newInputStream(form.getAttachment().filePath()))));
+
+                    if (asset == null) {
+                        return item.flatMap(snapshot -> {
+                            FlowAsset skeleton = new FlowAsset();
+                            skeleton.setAssetName(form.getAssetName());
+                            skeleton.setAssetRepository(form.getRepositoryName());
+                            return Uni.createFrom().completionStage(FlowAsset.uploadAsset(skeleton, snapshot, this.assetsRepository, storage))
+                                    .map(asset1 -> Response.ok(UploadResponseData.ok(asset1.getAssetName(), asset1.getUuid().toString())).build());
+                        });
+                    }
+
+                    Uni<Void> deleteUni;
+                    if (form.getRepositoryName().equals(asset.getAssetRepository())) {
+                        deleteUni = Uni.createFrom().completionStage(storage.deleteSnapshots(asset.getUuid().toString()));
+                    } else {
+                        deleteUni = Uni.createFrom().item(() -> this.storages.getStorageRepository(asset.getAssetRepository()))
+                                .onItem().ifNotNull().transformToUni(s -> Uni.createFrom().completionStage(s.deleteSnapshots(asset.getUuid().toString())))
+                                .invoke(() -> {
+                                    asset.setAssetRepository(form.getRepositoryName());
+                                    this.assetsRepository.save(asset);
+                                });
+                    }
+
+                    return deleteUni.flatMap(i -> item)
+                            .flatMap(snapshot -> Uni.createFrom().completionStage(FlowAsset.uploadAssetFile(asset, snapshot, this.assetsRepository, storage)))
+                            .map(v -> Response.ok(UploadResponseData.ok(asset.getAssetName(), asset.getUuid().toString())).build());
+                })
+                .onFailure().invoke(err -> Response.status(Status.INTERNAL_SERVER_ERROR).build())
                 .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
@@ -202,7 +224,7 @@ public class ApiRoute {
         return Uni.createFrom().item(() -> this.assetsRepository.getByName(form.getAssetName()))
                 .onItem().ifNotNull().transform(asset -> Tuple2.of(asset, this.storages.getStorageRepository(asset.getAssetRepository())))
                 .onItem().ifNotNull().transformToUni(tuple -> {
-                    Uni<Void> uni = Uni.createFrom().completionStage(tuple.getItem2().deleteSnapshots(tuple.getItem1().toString()));
+                    Uni<Void> uni = Uni.createFrom().completionStage(tuple.getItem2().deleteSnapshots(tuple.getItem1().getUuid().toString()));
                     Uni<FileSnapshot> item = Uni.createFrom()
                             .item(Unchecked.supplier(() -> FileSnapshot.createSkeleton(form.getAttachment().fileName(), Files.newInputStream(form.getAttachment().filePath()))));
 
