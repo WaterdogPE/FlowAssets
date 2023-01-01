@@ -230,12 +230,20 @@ public class ApiRoute {
         return Uni.createFrom().item(() -> this.assetsRepository.getByName(form.getAssetName()))
                 .onItem().ifNotNull().transform(asset -> Tuple2.of(asset, this.storages.getStorageRepository(asset.getAssetRepository())))
                 .onItem().ifNotNull().transformToUni(tuple -> {
-                    Uni<Void> uni = Uni.createFrom().completionStage(tuple.getItem2().deleteSnapshots(tuple.getItem1().getUuid().toString()));
+                    FlowAsset asset = tuple.getItem1();
+                    StorageRepositoryImpl storage = tuple.getItem2();
+
+                    Uni<Void> deleteUni;
+                    if (form.getAttachment().fileName().equals(getAssetFileName(asset))) {
+                        deleteUni = Uni.createFrom().voidItem(); // no need to delete if file is being replaced
+                    } else {
+                        deleteUni = Uni.createFrom().completionStage(storage.deleteSnapshots(asset.getUuid().toString()));
+                    }
+
                     Uni<FileSnapshot> item = Uni.createFrom()
                             .item(Unchecked.supplier(() -> FileSnapshot.createSkeleton(form.getAttachment().fileName(), Files.newInputStream(form.getAttachment().filePath()))));
-
-                    return uni.flatMap(i -> item)
-                            .flatMap(snapshot -> Uni.createFrom().completionStage(FlowAsset.uploadAssetFile(tuple.getItem1(), snapshot, this.assetsRepository, tuple.getItem2())))
+                    return deleteUni.flatMap(i -> item)
+                            .flatMap(snapshot -> Uni.createFrom().completionStage(FlowAsset.uploadAssetFile(asset, snapshot, this.assetsRepository, storage)))
                             .map(v -> Response.ok(Helper.success(form.getAssetName())).build());
                 })
                 .onFailure().invoke(err -> Response.status(Status.INTERNAL_SERVER_ERROR).build())
