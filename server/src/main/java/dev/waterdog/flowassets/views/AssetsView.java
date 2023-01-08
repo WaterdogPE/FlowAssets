@@ -95,7 +95,7 @@ public class AssetsView extends VerticalLayout {
             layout.getThemeList().add("spacing-xs");
 
             if (asset.getGroups().size() > 2) {
-                Span badge = new Span(new Span("2+"));
+                Span badge = new Span(new Span(String.valueOf(asset.getGroups().size())));
                 badge.getElement().getThemeList().add("badge pill");
                 layout.add(badge);
                 return layout;

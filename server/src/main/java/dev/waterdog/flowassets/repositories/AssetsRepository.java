@@ -32,4 +32,18 @@ public class AssetsRepository extends AbstractRepository<FlowAsset> {
     public FlowAsset findByUuid(String uuid) {
         return this.find("uuid", UUID.fromString(uuid)).firstResult();
     }
+
+    @Transactional
+    @Override
+    public void remove(FlowAsset value) {
+        if (!this.isPersistent(value)) {
+            value = this.getEntityManager().merge(value);
+        }
+
+        if (!value.getGroups().isEmpty()) {
+            value.setGroups(null);
+            this.persist(value);
+        }
+        this.delete(value);
+    }
 }
