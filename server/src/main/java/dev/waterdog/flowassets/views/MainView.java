@@ -56,12 +56,12 @@ public class MainView extends AppLayout {
         helloSpan.getStyle().set("margin-right", "var(--lumo-space-m");
 
         greetingSpan.addAttachListener(event -> {
-            String userName = Helper.getUserName(this.idToken);
-            if (userName.isEmpty()) {
+            // String userName = Helper.getUserName(this.idToken); TODO: fix this
+            if (this.idToken == null) {
                 greetingSpan.setText("Unauthenticated");
                 helloSpan.getElement().getThemeList().add("badge error");
             } else {
-                greetingSpan.setText("Hello " + userName);
+                greetingSpan.setText("Authenticated");
             }
         });
 
